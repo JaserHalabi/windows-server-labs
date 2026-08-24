@@ -1,105 +1,67 @@
-# Day 09: Proactive Security via Active File Screening
+# Day 09: Proactive Security via File Screening
 
-[![Sprint Day](https://img.shields.io/badge/Sprint-Day%2009-blue)](../README.md)
-[![Phase](https://img.shields.io/badge/Phase-Data%20Hardening-orange)](../README.md)
-[![Status](https://img.shields.io/badge/Status-Completed-brightgreen)](../README.md)
+[![Day 09](https://img.shields.io/badge/Day-09-blue)](../README.md)
+[![Phase](https://img.shields.io/badge/Phase-Storage%20Hardening-orange)](../README.md)
+[![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 
 ---
 
 ## 🎯 9.1 Objective
-The objective of this phase is to implement **Active File Screening** within the FSRM role. This ensures that the server storage is used strictly for business-critical documents and prevents the storage of non-authorized media files (Audio/Video), which protects both storage capacity and network bandwidth.
+To implement **Active File Screening** within the FSRM role. This ensures that the server storage is used strictly for business-critical documents and prevents the storage of non-authorized media files (Audio/Video), which protects both storage capacity and network bandwidth.
 
 ---
 
-## 🔬 9.2 Implementation Details & Architecture
+## 🛠️ 9.2 What I Did (Implementation Details)
 
-### 1. Screening Type: Active Screening
-- **Active Screening**: Prevents users from saving unauthorized files by actively aborting write operations before file headers commit to disk.
+1. **Screening Type**:
+   - Selected **Active Screening** (prevents users from saving unauthorized files).
 
-### 2. File Groups
-- Applied the **"Block Audio and Video Files"** template to the **`C:\CentralStorage`** path.
+2. **File Groups & Templates**:
+   - Applied the built-in **"Block Audio and Video Files"** template to the **`C:\CentralStorage`** path.
 
-### 3. Under the Hood: The FSRM Filter Driver Mechanism
-- **Mechanism**: The FSRM filter driver (`srmfltr.sys`) intercepts I/O requests at the Windows kernel level. If a file extension matches the blocked group (e.g., `.mp3`, `.mp4`, `.mov`, `.avi`, `.mkv`), the write operation is rejected at the kernel level before reaching physical storage.
-
-```mermaid
-sequenceDiagram
-    participant User as Domain Client
-    participant IO as Windows I/O Manager
-    participant Filter as FSRM Filter Driver (srmfltr.sys)
-    participant Disk as Physical Storage
-
-    User->>IO: Request Write: multimedia.mp4
-    IO->>Filter: Intercept I/O Request Packet (IRP)
-    Filter->>Filter: Match against "Block Audio & Video" (.mp4)
-    Filter-->>IO: 🛑 REJECT: STATUS_ACCESS_DENIED
-    IO-->>User: "Access is Denied" (Write Aborted at Kernel Level)
-```
+3. **Mechanism**:
+   - The FSRM filter driver intercepts I/O requests; if a file extension matches the blocked group (e.g., `.mp3`, `.mp4`, `.mov`, `.avi`, `.mkv`), the write operation is rejected at the kernel level.
 
 ---
 
-## 🛠️ 9.3 Implementation Steps
+## 🧠 9.3 "The Small Things": Technical Rationale & Sysadmin Details
 
-1. Open **File Server Resource Manager** (`fsrm.msc`).
-2. Expand **File Screening Management** > Select **File Screens**.
-3. Right-click **File Screens** > Select **Create File Screen...**.
-4. Set File screen path: `C:\CentralStorage`.
-5. Select **Derive properties from this file screen template (recommended)**.
-6. Choose template: **Block Audio and Video Files**.
-7. Confirm Screening Type is set to **Active screening: Do not allow users to save unauthorized files**.
-8. Click **Create**.
-
----
-
-## 📸 9.4 Visual Evidence & UI Artifact Analysis
-
-![FSRM Active File Screening Configuration](../assets/screenshots/09-fsrm-active-file-screening.png)
-
-### Deep-Dive Analysis of the Screenshot:
-1. **File Screen Management Grid**:
-   - **`File Screen Path`**: `C:\CentralStorage`
-     - Validates that every subfolder created for redirected user data (e.g. `\Jaser\Documents`) is protected under this screening policy.
-   - **`Screening Type`**: `Active`
-     - Confirms hard blocking behavior rather than passive audit logging.
-   - **`File Groups`**: `Block Audio and Video Files`
-     - Confirms association with the built-in media exclusion pattern list (`*.mp3`, `*.mp4`, `*.mov`, `*.avi`, `*.mkv`, `*.wav`, `*.wma`, etc.).
-   - **`Source Template`**: `Block Audio and Video Files`
-     - Demonstrates centralized template inheritance.
-   - **`Match Template`**: `Yes`
-     - Confirms full compliance with the enterprise security template.
+- **How the FSRM Filter Driver Works**:
+  File Screening does not rely on userland scripts or periodic scans. Instead, Windows uses a dedicated **kernel minifilter driver** (`srmfltr.sys`). When any process or network user attempts an I/O write request, the driver inspects the file extension. If it matches a blocked group, the kernel immediately aborts the write with `STATUS_ACCESS_DENIED`.
+- **Active vs. Passive Screening**:
+  - **Passive screening** allows the file to be saved and only generates an audit log or email alert.
+  - **Active screening** halts the file write before data commits to storage blocks, protecting corporate bandwidth and storage from unauthorized personal media.
+- **Ransomware Mitigation Principle**:
+  The exact same kernel-level active file screening technique is used in enterprise cybersecurity to block ransomware extensions (e.g. `.crypt`, `.locky`, `.wannacry`), neutralizing unauthorized encryption writes in real time.
 
 ---
 
-## ⚡ 9.5 Automated PowerShell Deployment
+## 📸 9.4 Visual Evidence & UI Verification
 
-```powershell
-<#
-.SYNOPSIS
-    Day 09 - Automated Active File Screening Deployment via FSRM.
-#>
+Below is the verification screenshot from my lab report showing the configured Active File Screen in FSRM:
 
-$ScreenPath = "C:\CentralStorage"
-$TemplateName = "Block Audio and Video Files"
+![FSRM Active File Screening Verification](../assets/screenshots/09-fsrm-active-file-screening.png)
 
-if (-not (Test-Path $ScreenPath)) {
-    New-Item -Path $ScreenPath -ItemType Directory -Force | Out-Null
-}
-
-if (-not (Get-FsrmFileScreen -Path $ScreenPath -ErrorAction SilentlyContinue)) {
-    New-FsrmFileScreen -Path $ScreenPath -Template $TemplateName -Active:$true -ErrorAction Stop
-} else {
-    Set-FsrmFileScreen -Path $ScreenPath -Template $TemplateName -Active:$true
-}
-```
+### Breakdown of the Verification Screenshot:
+- **`File Screen Path`**: `C:\CentralStorage`
+  - Validates that the screening policy covers the entire user data redirection repository and all child subfolders.
+- **`Screening Type`**: `Active`
+  - Confirms proactive real-time blocking instead of passive monitoring.
+- **`File Groups`**: `Block Audio and Video Files`
+  - Confirms blocking of unauthorized multimedia extensions (`.mp3`, `.mp4`, `.mov`, `.avi`, `.wav`, etc.).
+- **`Source Template`**: `Block Audio and Video Files`
+  - Shows template inheritance.
+- **`Match Template`**: `Yes`
+  - Confirms full compliance with the security template.
 
 ---
 
-## 🔍 9.6 Verification & Audit Checklist
+## 📋 9.5 Verification Summary
 
 | Property | Configured Setting | Observed in Screenshot | Status |
-| :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :---: |
 | **File Screen Path** | `C:\CentralStorage` | `C:\CentralStorage` | ✅ Verified |
-| **Screening Type** | Active Screening (Real-Time Block) | `Active` | ✅ Verified |
-| **File Groups** | Audio and Video Files | `Block Audio and Video Files` | ✅ Verified |
+| **Screening Type** | Active Screening (Real-time block) | `Active` | ✅ Verified |
+| **Target File Group** | Audio and Video Files | `Block Audio and Video Files` | ✅ Verified |
 | **Source Template** | Block Audio and Video Files | `Block Audio and Video Files` | ✅ Verified |
-| **Enforcement Layer** | Windows NT Kernel (`srmfltr.sys`) | Intercepts all I/O writes | ✅ Verified |
+| **Enforcement Layer** | Windows NT Kernel (`srmfltr.sys`) | Active on all I/O writes | ✅ Verified |

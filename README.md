@@ -1,128 +1,95 @@
 # Enterprise Network Infrastructure & Security Hardening
-### Windows Server 2019 Production Deployment & Administration Lab
+### Windows Server 2019 Portfolio & Hands-On Engineering Log
 
-[![OS](https://img.shields.io/badge/OS-Windows%20Server%202019%20Datacenter-0078D6?logo=windows&logoColor=white)](https://www.microsoft.com/en-us/windows-server)
-[![Domain](https://img.shields.io/badge/AD%20DS-JASER.LOCAL-orange?logo=active-directory)](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/active-directory-domain-services)
-[![Security](https://img.shields.io/badge/Security-Least%20Privilege%20%7C%20FSRM%20%7C%20GPO-green)](https://learn.microsoft.com/en-us/windows-server/security/windows-server-security)
-[![Author](https://img.shields.io/badge/Author-Jaser%20Halabi-blue)](https://github.com/)
-
----
-
-## 🏛️ Executive Summary
-
-This repository documents the end-to-end deployment, identity architecture, network automation, and security hardening of an enterprise environment built on **Windows Server 2019**. 
-
-Extracted directly from the hands-on engineering lab report by **Jaser Halabi**, this project is organized as a **9-Day Modular Implementation Sprint**. Every single phase incorporates authentic screenshot evidence from the lab report alongside deep-dive technical explanations of the underlying Windows Server internals, Kerberos authentication constraints, DNS/DHCP integration mechanics, NTFS vs SMB security models, and storage minifilter drivers.
+[![Author](https://img.shields.io/badge/Author-Jaser%20Halabi-blue?style=flat&logo=github)](https://github.com/)
+[![Course](https://img.shields.io/badge/Course-Cybersecurity%20%26%20Network%20Engineering-orange)](https://github.com/)
+[![OS](https://img.shields.io/badge/Platform-Windows%20Server%202019%20Datacenter-0078D6?logo=windows)](https://www.microsoft.com/en-us/windows-server)
+[![Domain](https://img.shields.io/badge/Active%20Directory-JASER.LOCAL-green)](https://github.com/)
 
 ---
 
-## 🌐 Enterprise Lab Topology & Architecture
+## 👨‍💻 About This Portfolio
+
+Welcome to my **Windows Server 2019 Enterprise Network Infrastructure & Security Hardening** portfolio.
+
+This repository serves as a documented proof-of-work showcasing my practical, hands-on systems administration and cybersecurity capabilities. I built, configured, secured, and validated a complete Active Directory enterprise environment from scratch using **Windows Server 2019 Datacenter**.
+
+Rather than using automated deployment templates, every component in this lab was manually deployed, configured, tuned, and verified through Windows Server management consoles (**Server Manager, MMC, DNS Manager, DHCP Console, Group Policy Management, and File Server Resource Manager**).
+
+---
+
+## 🗺️ Lab Architecture & Network Topology
 
 ```mermaid
 flowchart TB
-    subgraph Core["🏢 Domain Controller & Core Infrastructure (Server2019)"]
+    subgraph Host["🖥️ Server2019 (Primary Domain Controller)"]
         direction TB
-        IP["Static IPv4: 192.168.10.10/24<br/>DNS Loopback: 127.0.0.1<br/>Domain: JASER.LOCAL"]
-        AD["AD DS Forest Root<br/>NTDS.dit & SYSVOL"]
-        DNS["DNS Server<br/>Forward Lookup Zone + _msdcs SRV"]
-        DHCP["DHCP Server<br/>Scope: 192.168.1.0/24<br/>Options: 003, 006, 015"]
-        FSRM["FSRM Storage Engine<br/>100MB Hard Quota<br/>Active File Screening (Audio/Video Block)"]
+        Net["Static IP: 192.168.10.10/24<br/>DNS: 127.0.0.1 (Loopback)<br/>Time Zone: (UTC+02:00) Jerusalem"]
+        AD["Active Directory Domain Services<br/>Forest Root: JASER.LOCAL"]
+        DNS["DNS Server<br/>Forward Lookup Zone: JASER.LOCAL"]
+        DHCP["DHCP Server<br/>Scope: 192.168.1.0/24 (Options 003, 006, 015)"]
+        FSRM["File Server Resource Manager<br/>100MB Hard Quota & Active File Screening"]
     end
 
-    subgraph OU_Tree["🌳 Organizational Unit Hierarchy (Jaser-Enterprise)"]
+    subgraph OU["🌳 Active Directory Hierarchy (OU=Jaser-Enterprise)"]
         direction TB
-        RootOU["OU=Jaser-Enterprise"]
-        IT_OU["OU=IT<br/>👥 Admins & Techs<br/>📜 GPO: Dev Tools Allowed"]
-        HR_OU["OU=HR<br/>👥 HR Personnel<br/>📜 GPO: High Security & Screen Lock"]
-        Sales_OU["OU=Sales<br/>👥 Sales Reps<br/>📜 GPO: Standard Desktop & Run Restricted"]
-        
-        RootOU --> IT_OU
-        RootOU --> HR_OU
-        RootOU --> Sales_OU
+        IT_OU["OU=IT<br/>👤 Jaser Al. Halabi<br/>👤 Reem Abu. Shamma<br/>📜 GPO: Allow CMD & Bypass Lock Screen"]
+        HR_OU["OU=HR<br/>📜 GPO: Password Screensaver & Control Panel Lock"]
+        Sales_OU["OU=Sales<br/>📜 GPO: Wallpaper Lock & Remove Run Menu"]
     end
 
-    subgraph Storage["💾 Centralized User Storage & Data Redirection"]
+    subgraph Storage["💾 Centralized User Storage"]
         direction TB
-        Share["\\SERVER2019\CentralStorage<br/>(Share: Full / NTFS: Creator-Owner Isolated)"]
-        Redir["GPO Folder Redirection<br/>%USERPROFILE%\Documents -> \\SERVER2019\CentralStorage\%USERNAME%\Documents"]
+        Share["\\SERVER2019\CentralStorage<br/>(SMB Share: Everyone Read/Write)"]
+        Redir["Folder Redirection GPO<br/>%USERPROFILE%\Documents -> \\SERVER2019\CentralStorage\%USERNAME%"]
         Share --> Redir
     end
 
-    Core --> OU_Tree
-    Core --> Storage
+    Host --> OU
+    Host --> Storage
 ```
 
 ---
 
-## 📅 9-Day Implementation Sprint & Visual Evidence Index
+## 📅 Day-by-Day Implementation & Evidence Log
 
-| Sprint Day | Module | Core System Concepts | Lab Screenshot Evidence |
-| :--- | :--- | :--- | :--- |
-| [**Day 01**](docs/day-01-server-preconfig-and-networking.md) | **Server Pre-Configuration & Static Networking** | Hostname standardization (`Server2019`), static IPv4 (`192.168.10.10/24`), DNS loopback (`127.0.0.1`), and Kerberos 5-minute clock skew protection (`MaxClockSkew`). | ![Server Preconfig](assets/screenshots/01-server-manager-preconfig.png) |
-| [**Day 02**](docs/day-02-adds-role-and-forest-promotion.md) | **AD DS Role Provisioning & Forest Promotion** | Active Directory binary installation, forest root promotion (`JASER.LOCAL`), `NTDS.dit` ESE database, `SYSVOL` replication shares, and FSMO role seeding. | ![AD DS Promotion](assets/screenshots/02-adds-forest-promotion.png) |
-| [**Day 03**](docs/day-03-ou-hierarchy-and-user-management.md) | **Enterprise OU Hierarchy & Identity Management** | Custom `OU=Jaser-Enterprise` vs un-linkable `CN=Users` containers, departmental sub-OUs (IT, Sales, HR), and user accounts (`Jaser Al. Halabi`, `Reem Abu. Shamma`). | ![ADUC Hierarchy](assets/screenshots/03-active-directory-users-and-ous.png) |
-| [**Day 04**](docs/day-04-dns-server-and-service-discovery.md) | **DNS Management & AD Service Locator** | AD-Integrated Forward Lookup Zones, Host (A) records, SOA serial validation, and `_msdcs` SRV record service discovery (`_ldap`, `_kerberos`). | ![DNS Records](assets/screenshots/04-dns-manager-records.png) |
-| [**Day 05**](docs/day-05-dhcp-scope-and-enterprise-options.md) | **DHCP Automation & Enterprise Scope Options** | Active Directory DHCP authorization (`Add-DhcpServerInDC`), Scope `192.168.1.0/24`, Option 003 (Gateway `192.168.1.1`), Option 006 (DNS `192.168.10.10`), Option 015 (`JASER.LOCAL`). | ![DHCP Options](assets/screenshots/05-dhcp-scope-options.png) |
-| [**Day 06**](docs/day-06-departmental-group-policy-hardening.md) | **Departmental Group Policy (GPO) Hardening** | Granular baseline enforcement per department: HR password screensavers & Control Panel lock, IT CLI access, Sales wallpaper lock & Run command removal. | ![GPMC Console](assets/screenshots/06-group-policy-management.png) |
-| [**Day 07**](docs/day-07-centralized-folder-redirection.md) | **Centralized Data Redirection & Profile Isolation** | Redirecting `%USERPROFILE%\Documents` to `\\SERVER2019\CentralStorage`, configuring explicit NTFS inheritance and `CREATOR OWNER` DACLs for total data isolation. | ![User Folder Redirection](assets/screenshots/07-user-folder-verification.png) |
-| [**Day 08**](docs/day-08-advanced-storage-fsrm-quotas.md) | **Advanced Storage Management (FSRM Quotas)** | Hard Quotas (100 MB Limit) on `C:\CentralStorage`, filesystem-level write rejection (`ERROR_DISK_FULL`), protecting server volumes from storage exhaustion. | ![FSRM Quotas](assets/screenshots/08-fsrm-quota-configuration.png) |
-| [**Day 09**](docs/day-09-active-file-screening-security.md) | **Proactive Security via Active File Screening** | Kernel-level I/O write interception via FSRM Minifilter Driver (`srmfltr.sys`), blocking non-business media extensions (`.mp3`, `.mp4`, `.mov`, `.avi`). | ![FSRM File Screening](assets/screenshots/09-fsrm-active-file-screening.png) |
+Below is the complete 9-day chronological log of the work I performed, complete with implementation steps, technical rationales, and verified screenshots from my lab report:
 
----
-
-## ⚡ PowerShell Infrastructure-as-Code (IaC)
-
-All deployment phases in this repository are accompanied by production-ready, idempotent PowerShell scripts located in [`powershell/`](powershell/):
-
-```text
-powershell/
-├── 01-Server-PreConfig.ps1          # Hostname, Static IPv4, DNS Loopback, Timezone
-├── 02-ADDS-Deployment.ps1           # AD DS Role & Forest Root Deployment (JASER.LOCAL)
-├── 03-OU-and-User-Provisioning.ps1  # Enterprise OU Hierarchy & User Account Provisioning
-├── 04-DNS-Configuration.ps1        # DNS Zone Validation & Host A Record Management
-├── 05-DHCP-Configuration.ps1       # AD-Authorized DHCP Server & Scope Setup
-├── 06-Group-Policy-Management.ps1   # Departmental GPOs (HR, IT, Sales) & Links
-├── 07-Folder-Redirection-Storage.ps1# SMB Share & NTFS Security ACL Architecture
-├── 08-FSRM-Quota-Management.ps1     # FSRM Installation & 100MB Hard Quota Policy
-└── 09-FSRM-Active-File-Screening.ps1# Active File Screening (Audio/Video Blacklist)
-```
+| Day | Module / Task | What I Configured | Visual Verification |
+| :---: | :--- | :--- | :---: |
+| [**Day 01**](docs/day-01-server-preconfig-and-networking.md) | **Server Pre-Configuration & Static Networking** | Set hostname to `Server2019`, assigned static IPv4 `192.168.10.10/24`, configured loopback DNS `127.0.0.1`, and synced time zone to `(UTC+02:00) Jerusalem` for Kerberos. | [Screenshot](docs/day-01-server-preconfig-and-networking.md#visual-evidence--ui-verification) |
+| [**Day 02**](docs/day-02-adds-role-and-forest-promotion.md) | **AD DS Role & Forest Promotion** | Installed AD DS binaries and promoted `Server2019` to the root Domain Controller for the new forest `JASER.LOCAL`. | [Screenshot](docs/day-02-adds-role-and-forest-promotion.md#visual-evidence--ui-verification) |
+| [**Day 03**](docs/day-03-ou-hierarchy-and-user-management.md) | **OU Hierarchy & User Management** | Built custom `Jaser-Enterprise` root OU, created `IT`, `Sales`, and `HR` sub-OUs, and provisioned user accounts (`Jaser Al. Halabi`, `Reem Abu. Shamma`). | [Screenshot](docs/day-03-ou-hierarchy-and-user-management.md#visual-evidence--ui-verification) |
+| [**Day 04**](docs/day-04-dns-server-and-service-discovery.md) | **DNS Management & Service Discovery** | Verified AD-integrated Forward Lookup Zone `JASER.LOCAL`, validated SOA/NS records, and checked `_msdcs` SRV service discovery. | [Screenshot](docs/day-04-dns-server-and-service-discovery.md#visual-evidence--ui-verification) |
+| [**Day 05**](docs/day-05-dhcp-scope-and-enterprise-options.md) | **DHCP Server Configuration** | Provisioned IPv4 scope `192.168.1.0/24` and configured Option 003 (Router), Option 006 (DNS), and Option 015 (Domain Name). | [Screenshot](docs/day-05-dhcp-scope-and-enterprise-options.md#visual-evidence--ui-verification) |
+| [**Day 06**](docs/day-06-departmental-group-policy-hardening.md) | **Departmental Group Policy Hardening** | Enforced least privilege across departments: HR (screen lock & Control Panel restriction), IT (CMD allowed), Sales (wallpaper lock & Run removal). | [Screenshot](docs/day-06-departmental-group-policy-hardening.md#visual-evidence--ui-verification) |
+| [**Day 07**](docs/day-07-centralized-folder-redirection.md) | **Centralized Data Redirection (GPO)** | Created `\\SERVER2019\CentralStorage`, configured NTFS permissions, deployed GPO Folder Redirection for `Documents`, and verified per-user folder creation. | [Screenshot](docs/day-07-centralized-folder-redirection.md#visual-evidence--ui-verification) |
+| [**Day 08**](docs/day-08-advanced-storage-fsrm-quotas.md) | **Advanced Storage Management (FSRM)** | Installed FSRM and enforced a 100 MB Hard Quota on `C:\CentralStorage` to protect the OS disk against volume exhaustion attacks. | [Screenshot](docs/day-08-advanced-storage-fsrm-quotas.md#visual-evidence--ui-verification) |
+| [**Day 09**](docs/day-09-active-file-screening-security.md) | **Proactive Security via Active File Screening** | Implemented Active File Screening on `C:\CentralStorage` using the kernel minifilter driver to block non-work multimedia files (`.mp3`, `.mp4`, `.mov`). | [Screenshot](docs/day-09-active-file-screening-security.md#visual-evidence--ui-verification) |
 
 ---
 
-## 🔍 Key Windows Server 2019 Engineering Concepts Demonstrated
+## 🧠 "The Small Things": Key Sysadmin & Security Concepts I Applied
 
-1. **Active Directory & Identity Design**:
-   - Proper logical OU structuring avoiding legacy `CN=Users` containers to ensure clean Group Policy inheritance.
-   - User Principal Name (`user@jaser.local`) standardized identity conventions with secure password handling.
-2. **Network Services Cohesion**:
-   - Active Directory-Integrated DNS ensuring high-availability name resolution and dynamic SRV registration.
-   - Authorized DHCP server preventing rogue DHCP servers on the physical network.
-3. **Enterprise Group Policy Architecture**:
-   - Strict adherence to the **LSDOU** (Local -> Site -> Domain -> Organizational Unit) precedence model.
-   - Separation of administrative duties: providing developer/admin tools to IT while locking down standard end-user attack surfaces (Control Panel, Run Dialog).
-4. **Data Protection & Storage Governance**:
-   - Automated folder redirection ensuring user data resides safely on centralized, backed-up server storage.
-   - Principle of Least Privilege applied to file shares: Share Permissions (`Everyone: Read/Write`) paired with strict NTFS DACLs (`CREATOR OWNER: Full Control`).
-   - File Server Resource Manager (FSRM) active enforcement at the file system filter driver layer (`srmfltr.sys`), rejecting unauthorized write I/O before touching disk blocks.
+Throughout this deployment, I paid careful attention to the nuances that distinguish a production-ready enterprise server from a default setup:
 
----
-
-## 🚀 How to Push to Your GitHub Account
-
-```bash
-cd /home/jaser/.gemini/antigravity/scratch/windows-server-2019-enterprise-lab
-
-# Link to your remote GitHub repository
-git remote add origin https://github.com/<YOUR_GITHUB_USERNAME>/windows-server-2019-enterprise-lab.git
-
-# Push to main
-git push -u origin main
-```
+1. **Why I used `127.0.0.1` as DNS on the Domain Controller**:
+   Pointing the primary network adapter's DNS to loopback (`127.0.0.1`) ensures that the server queries its own local DNS database during boot, avoiding cold-start timeout loops and Netlogon service delays.
+2. **Why I synchronized the time zone for Kerberos**:
+   Active Directory authentication uses Kerberos v5, which enforces a strict 5-minute maximum clock skew (`MaxClockSkew`). Aligning the system time ensures tickets are validated without replay errors.
+3. **Why I created a dedicated `Jaser-Enterprise` OU instead of using `CN=Users`**:
+   The default `CN=Users` and `CN=Computers` folders are basic system containers where Group Policy Objects cannot be directly linked. Creating a dedicated root OU allows clean GPO inheritance and departmental segmentation.
+4. **Why I configured DHCP Options 003, 006, and 015**:
+   Assigning these options ensures connecting workstations automatically receive their default gateway (`192.168.1.1`), the Domain Controller's DNS (`192.168.10.10`), and the domain suffix (`JASER.LOCAL`) without any manual client configuration.
+5. **Why I implemented Department-Specific GPOs**:
+   Instead of applying broad domain-wide restrictions, I used the **LSDOU** inheritance model to enforce tight security on HR (protecting PII data), give operational tools to IT, and standardize the Sales desktop environment.
+6. **Why I used FSRM Hard Quotas and Kernel-Level Active File Screening**:
+   A Hard Quota physically stops write operations with `ERROR_DISK_FULL` when reaching 100MB, preventing storage denial-of-service. Active File Screening leverages the kernel minifilter driver (`srmfltr.sys`) to block unauthorized file types before they are written to disk.
 
 ---
 
-## 👤 Author & Lab Metadata
-- **Engineer**: Jaser Halabi
+## 👤 Portfolio Metadata
+- **Prepared By**: Jaser Halabi
 - **Course**: Cybersecurity & Network Engineering
-- **Project Completion Date**: April 9, 2026
-- **Target OS**: Windows Server 2019 Datacenter (Build 17763)
+- **Lab Date**: April 9, 2026
+- **Operating System**: Windows Server 2019 Datacenter

@@ -1,125 +1,84 @@
-# Day 07: Centralized Data Redirection (GPO) & Share Architecture
+# Day 07: Centralized Data Redirection (GPO)
 
-[![Sprint Day](https://img.shields.io/badge/Sprint-Day%2007-blue)](../README.md)
+[![Day 07](https://img.shields.io/badge/Day-07-blue)](../README.md)
 [![Phase](https://img.shields.io/badge/Phase-Data%20Management-orange)](../README.md)
-[![Status](https://img.shields.io/badge/Status-Completed-brightgreen)](../README.md)
+[![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 
 ---
 
 ## 🎯 7.1 Objective
-The objective of this phase is to implement **Folder Redirection** using Group Policy. This process ensures that a user’s "Documents" or "Desktop" folders are not stored locally on the PC, but are instead redirected to a secure, shared location on the server.
+To implement **Folder Redirection** using Group Policy. This process ensures that a user’s "Documents" or "Desktop" folders are not stored locally on the PC, but are instead redirected to a secure, shared location on the server.
 
 ---
 
-## 🔬 7.2 Implementation Details & Architecture
+## 🛠️ 7.2 What I Did (Implementation Steps)
 
-### 1. Step 1: Network Share Creation
-- A folder named **`CentralStorage`** was created on the server volume and shared with **Read/Write** permissions to act as the primary repository for user data.
-- Configured access for:
-  - **`Administrator`**: Read/Write
-  - **`Administrators`**: Owner
-  - **`Everyone`**: Read/Write
+1. **Step 1: Network Share Creation**:
+   - Created a folder named **`CentralStorage`** on the server volume (`C:\CentralStorage`).
+   - Shared the folder with **Read/Write** network permissions to act as the primary repository for user data:
+     - `Administrator`: Read/Write
+     - `Administrators`: Owner
+     - `Everyone`: Read/Write
 
-### 2. Step 2: Policy Configuration
-- A GPO was configured to redirect the **Documents** library to the server using the UNC path:
-  $$\text{\texttt{\textbackslash\textbackslash SERVER2019\textbackslash CentralStorage}}$$
-- **Target Setting**: `Basic - Redirect everyone's folder to the same location`
-- **Target Folder Location**: `Create a folder for each user under the root path`
-- **Root Path**: `\\SERVER2019\CentralStorage`
-
----
-
-## 🛠️ 7.3 Implementation Steps
-
-1. Create `C:\CentralStorage` on `Server2019`.
-2. Configure **Network Access / Sharing** on `CentralStorage` granting `Everyone` Read/Write permissions.
-3. Open **Group Policy Management** > Edit the redirection GPO.
-4. Navigate to `User Configuration > Policies > Windows Settings > Folder Redirection > Documents`.
-5. Open **Documents Properties** > Configure Target tab:
-   - Setting: *Basic - Redirect everyone's folder to the same location*
-   - Target folder location: *Create a folder for each user under the root path*
-   - Root Path: `\\SERVER2019\CentralStorage`
-6. Apply policy and verify user logon session.
+2. **Step 2: Policy Configuration**:
+   - In Group Policy Management, navigated to `User Configuration > Policies > Windows Settings > Folder Redirection > Documents`.
+   - Configured the policy to redirect the Documents library to the network share using the UNC path:
+     $$\text{\texttt{\textbackslash\textbackslash SERVER2019\textbackslash CentralStorage}}$$
+   - **Setting**: `Basic - Redirect everyone's folder to the same location`
+   - **Target Folder Location**: `Create a folder for each user under the root path`
+   - **Root Path**: `\\SERVER2019\CentralStorage`
 
 ---
 
-## 📸 7.4 Visual Evidence & UI Artifact Analysis
+## 🧠 7.3 "The Small Things": Technical Rationale & Sysadmin Details
 
-### Evidence of Configuration (Page 9 of Lab Report):
-| Network Access Sharing Configuration | Group Policy Documents Properties |
+- **Why Centralized Folder Redirection Matters**:
+  If a user workstation experiences hardware failure, malware infection, or drive corruption, locally saved documents are lost. Redirecting the Documents library guarantees that all user files reside on the central server where they can be backed up and protected with enterprise quotas.
+- **Dynamic Per-User Subdirectory Generation**:
+  By selecting *"Create a folder for each user under the root path"*, Windows automatically resolves the connecting user's security token and provisions a unique folder named after their username (e.g. `\\SERVER2019\CentralStorage\Jaser\Documents`).
+- **Seamless User Experience**:
+  To the end user, clicking on their standard "Documents" shortcut in File Explorer appears completely normal, while Windows transparently handles the network redirection in the background.
+
+---
+
+## 📸 7.4 Visual Evidence & UI Verification
+
+### Configuration Evidence:
+Below are the screenshots from my lab report showing the Network Access sharing configuration and the GPO Documents Redirection properties:
+
+| Network Access Share Permissions | Documents Folder Redirection GPO Properties |
 | :---: | :---: |
-| ![SMB Share Permissions](../assets/screenshots/07-smb-share-permissions.png) | ![Folder Redirection GPO](../assets/screenshots/07-folder-redirection-gpo.png) |
+| ![Network Access Permissions](../assets/screenshots/07-smb-share-permissions.png) | ![Folder Redirection Properties](../assets/screenshots/07-folder-redirection-gpo.png) |
 
-#### Analysis of Configuration UI:
-1. **Network Access Sharing Dialog (Left)**:
-   - Displays the shared access list:
-     - `Administrator` | Permission Level: `Read/Write`
-     - `Administrators` | Permission Level: `Owner`
-     - `Everyone` | Permission Level: `Read/Write`
-   - Validates that domain users have the network transport permissions required to initiate folder redirection handshakes.
-2. **Documents Properties Configuration Window (Right)**:
-   - **Setting Dropdown**: Confirms `Basic - Redirect everyone's folder to the same location`.
-   - **Target Folder Location**: Confirms `Create a folder for each user under the root path`.
-   - **Root Path**: Explicitly specifies `\\SERVER2019\CentralStorage`.
-   - **Example Preview**: Shows dynamic placeholder resolution: *"For user Clair, this folder will be redirected to: \\SERVER2019\CentralStorage\Clair\Documents"*.
+#### Breakdown of the Configuration Screenshots:
+- **Left Screenshot (Network Access Sharing Dialog)**:
+  - Shows `Administrator` with `Read/Write` permission level.
+  - Shows `Administrators` as `Owner`.
+  - Shows `Everyone` with `Read/Write` permission level, ensuring connecting domain users can establish their storage directories.
+- **Right Screenshot (Documents Properties Dialog)**:
+  - **Setting**: `Basic - Redirect everyone's folder to the same location`.
+  - **Target folder location**: `Create a folder for each user under the root path`.
+  - **Root Path**: `\\SERVER2019\CentralStorage`.
+  - **Preview Text**: *"For user Clair, this folder will be redirected to: \\SERVER2019\CentralStorage\Clair\Documents"*.
 
 ---
 
-### Final Verification (Page 10 of Lab Report):
-![User Directory Creation Verification](../assets/screenshots/07-user-folder-verification.png)
+### Final Verification Screenshot:
+To verify the policy, a domain user session was initiated. The system successfully created a unique directory for the user on the server, as shown below:
 
-#### Analysis of Verification UI:
-- **Location Bar**: Shows `Network > SERVER2019 > CentralStorage`.
-- **Directory Contents**: A private folder named **`Jaser`** was dynamically and automatically generated upon the initial domain user login session (Date modified: `4/9/2026 6:21 PM`, Type: `File folder`).
-- **Confirmation**: Proves the GPO successfully intercepted the client's local Documents library and seamlessly migrated profile storage to the central server repository.
+![User Directory Verification](../assets/screenshots/07-user-folder-verification.png)
 
----
-
-## ⚡ 7.5 Automated PowerShell Deployment
-
-```powershell
-<#
-.SYNOPSIS
-    Day 07 - Automated Storage Share & Folder Redirection Setup.
-#>
-
-$Path = "C:\CentralStorage"
-$ShareName = "CentralStorage"
-
-# 1. Create Directory
-if (-not (Test-Path $Path)) {
-    New-Item -Path $Path -ItemType Directory -Force | Out-Null
-}
-
-# 2. Configure NTFS Permissions (DACL)
-$Acl = Get-Acl $Path
-$Acl.SetAccessRuleProtection($true, $true)
-
-$AdminRule = New-Object System.Security.AccessControl.FileSystemAccessRule("BUILTIN\Administrators", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-$SystemRule = New-Object System.Security.AccessControl.FileSystemAccessRule("NT AUTHORITY\SYSTEM", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-$CreatorRule = New-Object System.Security.AccessControl.FileSystemAccessRule("CREATOR OWNER", "FullControl", "ContainerInherit,ObjectInherit", "InheritOnly", "Allow")
-$AuthRule = New-Object System.Security.AccessControl.FileSystemAccessRule("NT AUTHORITY\Authenticated Users", "CreateDirectories,AppendData,ReadAndExecute", "None", "None", "Allow")
-
-$Acl.ResetAccessRule($AdminRule)
-$Acl.AddAccessRule($SystemRule)
-$Acl.AddAccessRule($CreatorRule)
-$Acl.AddAccessRule($AuthRule)
-Set-Acl $Path $Acl
-
-# 3. Create SMB Share
-if (-not (Get-SmbShare -Name $ShareName -ErrorAction SilentlyContinue)) {
-    New-SmbShare -Name $ShareName -Path $Path -FullAccess "Everyone" -Description "User Profile Redirection Repository"
-}
-```
+#### Breakdown of the Final Verification Screenshot:
+- **Address Bar**: Shows `Network > SERVER2019 > CentralStorage`.
+- **Created Content**: Shows the private user folder **`Jaser`** (Date modified: `4/9/2026 6:21 PM`, Type: `File folder`), proving that the GPO executed and automated per-user directory provisioning upon domain logon.
 
 ---
 
-## 🔍 7.6 Verification & Audit Checklist
+## 📋 7.5 Verification Summary
 
-| Item Verified | Configured Setting | Observed in Screenshot | Status |
-| :--- | :--- | :--- | :--- |
-| **Share Name** | `CentralStorage` | Shared on `\\SERVER2019` | ✅ Verified |
-| **Share Access** | Everyone: Read/Write | Set in Network Access dialog | ✅ Verified |
-| **Redirection Target** | `\\SERVER2019\CentralStorage` | Configured in GPO Target Tab | ✅ Verified |
-| **User Directory** | `\\SERVER2019\CentralStorage\Jaser` | Generated automatically in File Explorer | ✅ Verified |
-| **Logon Session** | Domain User Session Initiated | Confirmed on 4/9/2026 | ✅ Verified |
+| Item | Value / Setting | Status |
+| :--- | :--- | :---: |
+| **Storage Share** | `\\SERVER2019\CentralStorage` | ✅ Verified |
+| **Share Permissions** | Everyone: Read/Write | ✅ Verified |
+| **GPO Redirection Setting** | Basic - Redirect everyone's folder | ✅ Verified |
+| **Dynamic Provisioning** | Auto-created `\Jaser` directory upon logon | ✅ Verified |

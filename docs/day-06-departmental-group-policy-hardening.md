@@ -1,34 +1,36 @@
 # Day 06: Departmental Group Policy Implementation & Security Hardening
 
-[![Sprint Day](https://img.shields.io/badge/Sprint-Day%2006-blue)](../README.md)
+[![Day 06](https://img.shields.io/badge/Day-06-blue)](../README.md)
 [![Phase](https://img.shields.io/badge/Phase-Security%20Hardening-orange)](../README.md)
-[![Status](https://img.shields.io/badge/Status-Completed-brightgreen)](../README.md)
+[![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 
 ---
 
 ## 🎯 6.1 Objective
-The objective of this phase is setting up Group Policy Objects (GPOs) to make sure each department has the right level of access. Instead of having the same rules for everyone, the **`HR`**, **`IT`**, and **`Sales`** OUs are used to apply specific restrictions. This ensures users only get the tools they actually need for their jobs and keeps the server environment secure by locking down things they shouldn't be touching.
+Setting up Group Policy Objects (GPOs) to make sure each department has the right level of access. Instead of having the same rules for everyone, I used the **`HR`**, **`IT`**, and **`Sales`** OUs to apply specific restrictions. This way, users only get the tools they actually need for their jobs, and we keep the server environment secure by locking down things they shouldn't be touching.
 
 ---
 
-## 🔬 6.2 Implementation Details & Technical Paths
+## 🛠️ 6.2 What I Did (Implementation Details & Technical Paths)
 
-### 1. (HR) Security Baseline
-*Enforces confidentiality and prevents physical shoulder-surfing of sensitive human resources and PII data.*
+Using the Group Policy Management Editor, I created and linked specific GPOs with the following Administrative Template settings:
+
+### 1. (HR) Security
+*Focused on protecting sensitive employee PII and preventing unauthorized physical access:*
 - **Force Screen Saver Password**:
   - **Path**: `User Configuration > Policies > Administrative Templates > Control Panel > Personalization > Password protect the screen saver`
 - **Restrict Control Panel Access**:
   - **Path**: `User Configuration > Policies > Administrative Templates > Control Panel > Prohibit access to Control Panel and PC settings`
 
-### 2. (IT) Administration Baseline
-*Provides administrative tools for technical staff while streamlining administrative workstation sign-ins.*
+### 2. (IT) Administration
+*Ensured administrative tools remain accessible to technical engineers while optimizing technician login flow:*
 - **Allow Command Prompt**:
   - **Path**: `User Configuration > Policies > Administrative Templates > System > Prevent access to the command prompt` *(Set to Disabled)*
 - **Disable Screen Lock**:
   - **Path**: `User Configuration > Policies > Administrative Templates > Control Panel > Personalization > Do not display the lock screen`
 
 ### 3. Sales Department Standardization
-*Standardizes the user desktop environment and eliminates unauthorized execution vectors.*
+*Enforced environment standardization and eliminated unauthorized application execution:*
 - **Prevent Changing Wallpaper**:
   - **Path**: `User Configuration > Policies > Administrative Templates > Control Panel > Personalization > Prevent changing desktop background`
 - **Remove "Run" Command**:
@@ -36,93 +38,45 @@ The objective of this phase is setting up Group Policy Objects (GPOs) to make su
 
 ---
 
-## 🛠️ 6.3 Implementation Steps
+## 🧠 6.3 "The Small Things": Technical Rationale & Sysadmin Details
 
-1. Open **Group Policy Management** (`gpmc.msc`).
-2. Expand `Forest: JASER.LOCAL` > `Domains` > `JASER.LOCAL` > `Jaser-Enterprise`.
-3. Create and link departmental GPOs:
-   - Under **`HR`**: Link `Force Screen Saver Password` and `Restrict Control Panel Access`.
-   - Under **`IT`**: Link `Allow Command Prompt` and `Disable Screen Lock`.
-   - Under **`Sales`**: Link `Prevent Changing Wallpaper.` and `Remove "Run" Command`.
-4. Configure each GPO using the Group Policy Management Editor to the specific Administrative Template paths.
+- **The LSDOU Precedence Model**:
+  Windows Group Policy evaluates policies in the order of **Local -> Site -> Domain -> OU**. By linking these GPOs directly to their respective departmental OUs beneath `Jaser-Enterprise`, the departmental settings take precedence over higher-level domain defaults.
+- **Why HR needs Password-Protected Screen Saver & Control Panel restrictions**:
+  HR personnel frequently handle sensitive payroll, identification, and personal information. Requiring a password on screen resume mitigates shoulder-surfing and unattended session takeover, while blocking Control Panel prevents users from tampering with network or system configurations.
+- **Why Sales has the "Run" menu removed**:
+  The Windows Run dialog (`Win+R`) allows direct launching of command-line tools or unapproved executables. Removing it streamlines the user interface and reduces the threat surface for non-technical commercial staff.
 
 ---
 
-## 📸 6.4 Visual Evidence & UI Artifact Analysis
+## 📸 6.4 Visual Evidence & UI Verification
+
+Below is the verification screenshot from my lab report showing the Group Policy Management console:
 
 ![Group Policy Management Console Hierarchy](../assets/screenshots/06-group-policy-management.png)
 
-### Deep-Dive Analysis of the Screenshot:
-1. **Directory GPO Structure (Left Pane)**:
-   - **`Forest: JASER.LOCAL` > `Domains` > `JASER.LOCAL`**: Shows the top-level domain container.
-   - **`Default Domain Policy`**: Active at the domain apex.
-   - **`Jaser-Enterprise` Root OU**: Contains the three departmental sub-OUs:
-     - **`HR` OU**:
-       - 🔗 `Force Screen Saver Password` (Linked & Enabled)
-       - 🔗 `Restrict Control Panel Access` (Linked & Enabled)
-     - **`IT` OU**:
-       - 🔗 `Allow Command Prompt` (Linked & Enabled)
-       - 🔗 `Disable Screen Lock` (Linked & Enabled)
-     - **`Sales` OU**:
-       - 🔗 `Prevent Changing Wallpaper.` (Linked & Enabled)
-       - 🔗 `Remove "Run" Command` (Linked & Enabled)
-2. **Domain Baseline Status (Right Pane)**:
-   - Displays `JASER.LOCAL` status:
-     - `Server2019.JASER.LOCAL is the baseline domain controller`
-     - Confirms SYSVOL replication and Active Directory infrastructure health are synchronized.
+### Breakdown of the Verification Screenshot:
+- **Left Pane (GPO Hierarchy Tree)**:
+  - **`Forest: JASER.LOCAL` > `Domains` > `JASER.LOCAL`**: Shows the top-level forest and domain hierarchy.
+  - **`Jaser-Enterprise` OU**:
+    - **`HR` OU**: Shows linked GPOs:
+      - 🔗 `Force Screen Saver Password`
+      - 🔗 `Restrict Control Panel Access`
+    - **`IT` OU**: Shows linked GPOs:
+      - 🔗 `Allow Command Prompt`
+      - 🔗 `Disable Screen Lock`
+    - **`Sales` OU**: Shows linked GPOs:
+      - 🔗 `Prevent Changing Wallpaper.`
+      - 🔗 `Remove "Run" Command`
+- **Right Pane (Domain Status)**:
+  - Shows **`Server2019.JASER.LOCAL is the baseline domain controller`**, confirming active directory and policy replication status are synchronized.
 
 ---
 
-## ⚡ 6.5 Automated PowerShell Deployment
+## 📋 6.5 Verification Summary
 
-```powershell
-<#
-.SYNOPSIS
-    Day 06 - Automated Departmental GPO Deployment.
-#>
-
-Import-Module GroupPolicy
-
-$Domain = "JASER.LOCAL"
-$BaseOU = "OU=Jaser-Enterprise,DC=JASER,DC=LOCAL"
-
-function Link-GPO {
-    param ($Name, $OU)
-    $Target = "OU=$OU,$BaseOU"
-    if (-not (Get-GPO -Name $Name -ErrorAction SilentlyContinue)) {
-        New-GPO -Name $Name | Out-Null
-    }
-    New-GPLink -Name $Name -Target $Target -ErrorAction SilentlyContinue | Out-Null
-}
-
-# HR
-Link-GPO -Name "Force Screen Saver Password" -OU "HR"
-Set-GPRegistryValue -Name "Force Screen Saver Password" -Key "HKCU\Software\Policies\Microsoft\Windows\Control Panel\Desktop" -ValueName "ScreenSaverIsSecure" -Type String -Value "1"
-
-Link-GPO -Name "Restrict Control Panel Access" -OU "HR"
-Set-GPRegistryValue -Name "Restrict Control Panel Access" -Key "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -ValueName "NoControlPanel" -Type DWord -Value 1
-
-# IT
-Link-GPO -Name "Allow Command Prompt" -OU "IT"
-Set-GPRegistryValue -Name "Allow Command Prompt" -Key "HKCU\Software\Policies\Microsoft\Windows\System" -ValueName "DisableCMD" -Type DWord -Value 0
-
-Link-GPO -Name "Disable Screen Lock" -OU "IT"
-Set-GPRegistryValue -Name "Disable Screen Lock" -Key "HKLM\SOFTWARE\Policies\Microsoft\Windows\Personalization" -ValueName "NoLockScreen" -Type DWord -Value 1
-
-# Sales
-Link-GPO -Name "Prevent Changing Wallpaper" -OU "Sales"
-Set-GPRegistryValue -Name "Prevent Changing Wallpaper" -Key "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop" -ValueName "NoChangingWallPaper" -Type DWord -Value 1
-
-Link-GPO -Name "Remove Run Command" -OU "Sales"
-Set-GPRegistryValue -Name "Remove Run Command" -Key "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -ValueName "NoRun" -Type DWord -Value 1
-```
-
----
-
-## 🔍 6.6 Verification & Audit Checklist
-
-| Target OU | Linked GPO Name | Policy Path Configured | Status |
-| :--- | :--- | :--- | :--- |
+| Department OU | Linked GPO Name | Policy Path Configured | Status |
+| :--- | :--- | :--- | :---: |
 | **`HR`** | Force Screen Saver Password | `Control Panel > Personalization > Password protect the screen saver` | ✅ Verified |
 | **`HR`** | Restrict Control Panel Access | `Control Panel > Prohibit access to Control Panel and PC settings` | ✅ Verified |
 | **`IT`** | Allow Command Prompt | `System > Prevent access to the command prompt (Disabled)` | ✅ Verified |

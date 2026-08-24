@@ -1,8 +1,8 @@
-# Day 04: DNS Management & Active Directory Service Discovery
+# Day 04: DNS Management & Service Discovery
 
-[![Sprint Day](https://img.shields.io/badge/Sprint-Day%2004-blue)](../README.md)
+[![Day 04](https://img.shields.io/badge/Day-04-blue)](../README.md)
 [![Phase](https://img.shields.io/badge/Phase-Network%20Services-orange)](../README.md)
-[![Status](https://img.shields.io/badge/Status-Completed-brightgreen)](../README.md)
+[![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 
 ---
 
@@ -11,89 +11,57 @@ The objective of this phase is to verify the automated installation and health o
 
 ---
 
-## 🔬 4.2 Enterprise Architecture & "The Small Things"
-
-### 1. Service Verification & Forward Lookup Zones
-- **Service Verification**: Confirmed that the DNS Server role was successfully initialized alongside Active Directory.
-- **Zone Management**: Verified the existence of the Forward Lookup Zone for **`JASER.LOCAL`**.
-- **Record Validation**: Confirmed that the primary Host (A) record is correctly mapped to the server’s static IP (**`192.168.10.10`**).
-
-### 2. Under the Hood: The AD DS DNS Namespace
-- **Active Directory-Integrated Storage**: Zones are stored within the `DomainDnsZones` and `ForestDnsZones` directory partitions, enabling multi-master replication and Kerberos-authenticated dynamic updates.
-- **`_msdcs.JASER.LOCAL` Subdomain**: Contains SRV locator records (`_ldap._tcp`, `_kerberos._tcp`, `_kpasswd._tcp`) that allow client machines to discover domain controllers, authenticate tickets, and locate global catalog servers.
-- **Apex Host (A) Record (`(same as parent folder)`)**: Maps queries directed to `jaser.local` directly to the DC IP `192.168.10.10`.
-
----
-
-## 🛠️ 4.3 Implementation Steps
+## 🛠️ 4.2 What I Did (Implementation Steps)
 
 1. **Service Verification**:
-   - Open **DNS Manager** (`dnsmgmt.msc`).
-   - Expand server node **`SERVER2019`**.
-2. **Zone Audit**:
-   - Expand **Forward Lookup Zones** > Select **`JASER.LOCAL`**.
+   - Confirmed that the DNS Server role was successfully initialized alongside Active Directory Domain Services.
+   
+2. **Zone Management**:
+   - Opened **DNS Manager** (`dnsmgmt.msc`) under `SERVER2019`.
+   - Verified the existence of the Forward Lookup Zone for **`JASER.LOCAL`**.
+
 3. **Record Validation**:
-   - Verified that the Start of Authority (SOA), Name Server (NS), and Host (A) records exist and point to valid targets.
+   - Confirmed that the primary Host (A) record is correctly mapped to the server’s static IP (**`192.168.10.10`**).
+   - Validated the Start of Authority (SOA) and Name Server (NS) records.
 
 ---
 
-## 📸 4.4 Visual Evidence & UI Artifact Analysis
+## 🧠 4.3 "The Small Things": Technical Rationale & Sysadmin Details
 
-![DNS Manager Forward Lookup Zone and Records](../assets/screenshots/04-dns-manager-records.png)
-
-### Deep-Dive Analysis of the Screenshot:
-1. **Console Navigation Tree (Left Pane)**:
-   - **`SERVER2019`**: Authoritative DNS server node.
-   - **Forward Lookup Zones**: Expanded to show `_msdcs.JASER.LOCAL` and `JASER.LOCAL`.
-   - **Service Folders**: Under `JASER.LOCAL`, service subfolders `_msdcs`, `_sites`, `_tcp`, `_udp`, `DomainDnsZones`, and `ForestDnsZones` are clearly visible.
-2. **Resource Records Grid (Right Pane)**:
-   - **Start of Authority (SOA)**:
-     - `Name: (same as parent folder)` | `Type: Start of Authority (SOA)` | `Data: [19], server2019.jaser.local.` | `Timestamp: static`
-     - Indicates the zone's serial number is 19 and authoritative primary server is `server2019.jaser.local`.
-   - **Name Server (NS)**:
-     - `Name: (same as parent folder)` | `Type: Name Server (NS)` | `Data: server2019.jaser.local.` | `Timestamp: static`
-   - **Parent Apex Host (A) Record**:
-     - `Name: (same as parent folder)` | `Type: Host (A)` | `Data: 192.168.10.10` | `Timestamp: static`
-   - **Domain Controller Host (A) Record**:
-     - `Name: server2019` | `Type: Host (A)` | `Data: 192.168.10.10` | `Timestamp: static`
-     - Validates that `server2019.jaser.local` resolves directly to `192.168.10.10`.
+- **Why DNS is Essential for Active Directory**:
+  In a Windows domain, DNS does more than translate hostnames to IPs. Active Directory relies on **SRV (Service) locator records** stored inside the `_msdcs.JASER.LOCAL` subfolder to help client workstations discover Domain Controllers running LDAP (port 389) and Kerberos KDC (port 88).
+- **Active Directory-Integrated Forward Lookup Zone**:
+  The `JASER.LOCAL` zone is stored directly within Active Directory, enabling secure dynamic updates (only authenticated domain members can register their IP addresses) and multi-master replication.
+- **Apex Host (A) Record (`(same as parent folder)`)**:
+  This record ensures that any client querying the base domain name `jaser.local` directly resolves to `192.168.10.10`.
 
 ---
 
-## ⚡ 4.5 Automated PowerShell Validation
+## 📸 4.4 Visual Evidence & UI Verification
 
-```powershell
-<#
-.SYNOPSIS
-    Day 04 - Automated DNS Zone Audit and Record Health Validation.
-#>
+Below is the verification screenshot from my lab report showing the DNS Manager console and configured records:
 
-Import-Module DnsServer
+![DNS Manager Records Verification](../assets/screenshots/04-dns-manager-records.png)
 
-$ZoneName = "JASER.LOCAL"
-Write-Host "[*] Auditing DNS Forward Lookup Zone: $ZoneName..." -ForegroundColor Yellow
-
-# 1. Query Resource Records
-Get-DnsServerResourceRecord -ZoneName $ZoneName | 
-    Where-Object { $_.RecordType -in @("SOA", "NS", "A") } | 
-    Select-Object HostName, RecordType, @{Name="Data"; Expression={$_.RecordData.IPv4Address.IPAddressToString + $_.RecordData.PrimaryServer}}
-
-# 2. Test Name Resolution
-$ApexResult = Resolve-DnsName -Name $ZoneName -Server 127.0.0.1
-$HostResult = Resolve-DnsName -Name "server2019.$ZoneName" -Server 127.0.0.1
-
-Write-Host "[+] Domain Apex ($ZoneName) resolves to: $($ApexResult.IPAddress)" -ForegroundColor Green
-Write-Host "[+] Host (server2019.$ZoneName) resolves to: $($HostResult.IPAddress)" -ForegroundColor Green
-```
+### Breakdown of the Verification Screenshot:
+- **Left Pane (Console Tree)**:
+  - Shows server node **`SERVER2019`**.
+  - Shows **Forward Lookup Zones** expanded to `_msdcs.JASER.LOCAL` and `JASER.LOCAL`.
+  - Under `JASER.LOCAL`, service subfolders `_msdcs`, `_sites`, `_tcp`, `_udp`, `DomainDnsZones`, and `ForestDnsZones` are visible.
+- **Right Pane (Record Details)**:
+  - **Start of Authority (SOA)**: `[19], server2019.jaser.local.` (Serial number: 19, Primary server: `server2019.jaser.local`).
+  - **Name Server (NS)**: `server2019.jaser.local.`.
+  - **Host (A) Record `(same as parent folder)`**: Points to static IP `192.168.10.10`.
+  - **Host (A) Record `server2019`**: Points to static IP `192.168.10.10`.
 
 ---
 
-## 🔍 4.6 Verification & Audit Checklist
+## 📋 4.5 Verification Summary
 
-| Record Name | Record Type | Target / IP Data | Observed in Screenshot | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| `(same as parent folder)` | SOA | `[19], server2019.jaser.local.` | Present & Valid | ✅ Verified |
-| `(same as parent folder)` | NS | `server2019.jaser.local.` | Present & Valid | ✅ Verified |
-| `(same as parent folder)` | Host (A) | `192.168.10.10` | Present & Valid | ✅ Verified |
-| `server2019` | Host (A) | `192.168.10.10` | Present & Valid | ✅ Verified |
-| `_msdcs` Sub-tree | Delegation/Folder | Service Locator Records | Present & Active | ✅ Verified |
+| Record Name | Type | Configured Data | Observed in Screenshot | Status |
+| :--- | :--- | :--- | :--- | :---: |
+| `(same as parent folder)` | Start of Authority (SOA) | `[19], server2019.jaser.local.` | `[19], server2019.jaser.local.` | ✅ Verified |
+| `(same as parent folder)` | Name Server (NS) | `server2019.jaser.local.` | `server2019.jaser.local.` | ✅ Verified |
+| `(same as parent folder)` | Host (A) | `192.168.10.10` | `192.168.10.10` | ✅ Verified |
+| `server2019` | Host (A) | `192.168.10.10` | `192.168.10.10` | ✅ Verified |
+| `_msdcs.JASER.LOCAL` | Sub-Zone / Folders | Service Locators | Present & Healthy | ✅ Verified |
