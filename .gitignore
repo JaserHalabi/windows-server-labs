@@ -1,0 +1,27 @@
+# Windows Server & PowerShell GitIgnore
+*.log
+*.tmp
+*.bak
+*.swp
+
+# PowerShell History & Profile
+$null
+*.ps1xml
+*~
+
+# Windows Thumbnail & Desktop configs
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# OS generated files
+.DS_Store
+.directory
+
+# Virtualization / Disk Images (if any)
+*.iso
+*.vhdx
+*.vhd
+*.vmdk
+*.ova
+*.ovf
