@@ -66,19 +66,7 @@ flowchart TB
 
 ---
 
-## 🚀 How to Push to GitHub
 
-```bash
-cd /home/jaser/.gemini/antigravity/scratch/windows-server-2019-enterprise-lab
-
-# Link your remote GitHub repository
-git remote add origin https://github.com/<YOUR_GITHUB_USERNAME>/windows-server-2019-enterprise-lab.git
-
-# Push to main
-git push -u origin main
-```
-
----
 
 ## 👤 Report Metadata
 - **Prepared By**: Jaser Halabi
