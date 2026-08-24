@@ -7,53 +7,69 @@
 ---
 
 ## 🎯 2.1 Objective
-The objective of Day 02 is to install the Active Directory Domain Services (AD DS) server binaries and promote `Server2019` into the primary Domain Controller of a brand-new Active Directory forest: **`JASER.LOCAL`**.
+The objective of this phase is to install the Active Directory Domain Services (AD DS) role and promote the server to a Domain Controller, creating a brand-new forest to serve as the centralized identity provider for the network.
 
 ---
 
 ## 🔬 2.2 Enterprise Architecture & "The Small Things"
 
 ### 1. The Two-Step Deployment Model
-Deploying a Domain Controller in modern Windows Server consists of two distinct stages:
-1. **Binary Installation (`AD-Domain-Services`)**: Copies the server binaries, PowerShell modules, and MMC snap-in management tools to the local `WinSxS` component store.
-2. **Forest Promotion (`Install-ADDSForest`)**: Initializes directory partitions, creates the cryptographic keys, builds the Extensible Storage Engine (ESE) database, and provisions the `SYSVOL` share.
+Deploying an enterprise Domain Controller in Windows Server 2019 consists of two sequential phases:
+1. **Role Provisioning**: Navigated to the Add Roles and Features Wizard to install the Active Directory Domain Services binary files and management consoles (RSAT).
+2. **Forest Promotion**: Initialized the post-deployment configuration by selecting "Add a new forest" and defining the Root Domain Name as **`JASER.LOCAL`**.
 
-### 2. Deep Directory Internals
-- **Database (`NTDS.dit`)**: Located at `C:\Windows\NTDS\ntds.dit`. This is an ESE (Jet Blue) indexed database holding all directory objects, schema definitions, and security principals.
-- **Transaction Logs (`edb.log`)**: Circular logging mechanism ensuring ACID transactions across directory operations.
-- **`SYSVOL` Share**: Located at `C:\Windows\SYSVOL\sysvol\JASER.LOCAL`. This shared directory houses all Group Policy Objects (GPOs), startup/logon scripts, and is replicated across Domain Controllers via Distributed File System Replication (DFSR).
-- **Directory Services Restore Mode (DSRM)**: A local administrator account stored in the SAM registry hive rather than Active Directory, utilized solely when booting into Safe Mode / DSRM for offline database compaction or authoritative restores.
-
-### 3. FSMO Role Seeding
-As the root Domain Controller of a new forest, `Server2019` automatically becomes the master holder of all 5 **Flexible Single Master Operation (FSMO)** roles:
-- **Forest-Wide**: Schema Master, Domain Naming Master.
-- **Domain-Wide**: Primary Domain Controller (PDC) Emulator, Relative Identifier (RID) Master, Infrastructure Master.
+### 2. Under the Hood: Directory Partitions & Files
+- **Database File (`NTDS.dit`)**: Located at `C:\Windows\NTDS\ntds.dit`. Uses the Extensible Storage Engine (ESE / Jet Blue) to store directory objects, schema definitions, and credentials.
+- **`SYSVOL` Folder**: Located at `C:\Windows\SYSVOL\sysvol\JASER.LOCAL`. Replicated across DCs via Distributed File System Replication (DFSR), holding domain GPOs and logon scripts.
+- **FSMO Role Seeding**: As the forest root DC, `Server2019` automatically seeds and owns all 5 Flexible Single Master Operation (FSMO) roles: Schema Master, Domain Naming Master, PDC Emulator, RID Master, and Infrastructure Master.
 
 ---
 
 ## 🛠️ 2.3 Implementation Steps
 
-### Method 1: Graphical User Interface (GUI)
 1. **Role Provisioning**:
-   - Open **Server Manager** > Click **Manage** > Select **Add Roles and Features**.
-   - Proceed to the **Server Roles** page and select **Active Directory Domain Services**.
-   - Accept the prompt to include all required management features (RSAT tools).
-   - Complete the wizard and click **Install**.
+   - Open **Server Manager** > Select **Add Roles and Features**.
+   - Navigate to **Server Roles** > Check **Active Directory Domain Services**.
+   - Accept the addition of required RSAT management consoles.
+   - Complete installation.
 2. **Forest Promotion**:
-   - Once installation completes, click the **Notification flag** in Server Manager and select **Promote this server to a domain controller**.
+   - Click the post-deployment notification flag in Server Manager > **Promote this server to a domain controller**.
    - On the **Deployment Configuration** page:
      - Select **Add a new forest**.
      - Specify the **Root domain name**: `JASER.LOCAL`.
-   - On the **Domain Controller Options** page:
-     - Verify Forest and Domain Functional Levels are set to **Windows Server 2016** (highest available in Server 2019).
-     - Ensure **Domain Name System (DNS) server** and **Global Catalog (GC)** are checked.
-     - Enter a strong **Directory Services Restore Mode (DSRM) password**.
-   - Retain default NetBIOS domain name (`JASER`) and standard database paths (`C:\Windows\NTDS`, `C:\Windows\SYSVOL`).
-   - Pass prerequisite checks and click **Install**. The server will automatically reboot upon completion.
+     - Target Server: `Server2019`.
+   - Set Forest/Domain Functional Levels to **Windows Server 2016**.
+   - Enter the **Directory Services Restore Mode (DSRM)** recovery password.
+   - Execute prerequisite checks and initiate promotion.
 
 ---
 
-## ⚡ 2.4 Automated PowerShell Deployment
+## 📸 2.4 Visual Evidence & UI Artifact Analysis
+
+| Phase 1: AD DS Role Provisioning | Phase 2: Forest Root Promotion |
+| :---: | :---: |
+| ![AD DS Role Selection](../assets/screenshots/02-adds-role-selection.png) | ![AD DS Forest Promotion](../assets/screenshots/02-adds-forest-promotion.png) |
+
+### Deep-Dive Analysis of the Screenshots:
+
+#### Left Screenshot (Add Roles and Features Wizard):
+1. **Role Selection Checkbox**:
+   - `Active Directory Domain Services` is explicitly checked with its child management consoles included.
+   - The description box details the role function: *"Active Directory Domain Services (AD DS) stores information about objects on the network and makes this information available to users and network administrators."*
+2. **Installation Wizard Workflow**:
+   - Visible left navigation track shows the linear validation path: *Before You Begin -> Installation Type -> Server Selection -> Server Roles -> Features -> AD DS -> Confirmation -> Results*.
+
+#### Right Screenshot (Active Directory Domain Services Configuration Wizard):
+1. **Deployment Configuration Operation**:
+   - The radio button **"Add a new forest"** is selected (rather than adding a DC to an existing domain or adding a new domain to an existing forest), confirming this is the foundational root domain.
+2. **Root Domain Name (`JASER.LOCAL`)**:
+   - Shows the enterprise root namespace `JASER.LOCAL` entered into the Root domain name field.
+3. **Target Server**:
+   - Upper right corner displays `TARGET SERVER: Server2019`, confirming promotion is occurring on the previously standardized host.
+
+---
+
+## ⚡ 2.5 Automated PowerShell Deployment
 
 ```powershell
 <#
@@ -67,18 +83,13 @@ As the root Domain Controller of a new forest, `Server2019` automatically become
 param (
     [string]$DomainName = "JASER.LOCAL",
     [string]$NetbiosName = "JASER",
-    [SecureString]$SafeModePassword = (ConvertTo-SecureString "P@ssw0rd2026!" -AsPlainText -Force)
+    [SecureString]$SafeModePassword = (ConvertTo-SecureString "EnterpriseAdmin2026!" -AsPlainText -Force)
 )
 
-Write-Host "[+] Initializing Day 02 AD DS Deployment..." -ForegroundColor Cyan
-
-# 1. Install AD DS Binaries and Management Tools
-Write-Host "[*] Installing Active Directory Domain Services role..." -ForegroundColor Yellow
+Write-Host "[+] Installing Active Directory Domain Services role..." -ForegroundColor Yellow
 Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
 
-# 2. Forest Promotion
 Write-Host "[*] Promoting server to Domain Controller for forest: $DomainName..." -ForegroundColor Yellow
-
 Install-ADDSForest `
     -DomainName $DomainName `
     -DomainNetbiosName $NetbiosName `
@@ -96,34 +107,12 @@ Install-ADDSForest `
 
 ---
 
-## 🔍 2.5 Verification & Evidence
+## 🔍 2.6 Verification & Audit Checklist
 
-### Verification Commands
-```powershell
-# Verify Domain Membership and Functional Levels
-Get-ADDomain -Identity JASER.LOCAL | Select-Object Name, DomainMode, PDCEmulator, RIDMaster, InfrastructureMaster
-
-# Verify Forest Structure & FSMO Roles
-Get-ADForest -Identity JASER.LOCAL | Select-Object Name, ForestMode, SchemaMaster, DomainNamingMaster
-
-# Verify SYSVOL and Netlogon Shares
-Get-SmbShare | Where-Object { $_.Name -in @("SYSVOL", "NETLOGON") }
-```
-
-### Expected Output
-```text
-Name        DomainMode        PDCEmulator                RIDMaster
-----        ----------        -----------                ---------
-JASER.LOCAL Windows2016Domain Server2019.jaser.local      Server2019.jaser.local
-
-Name        ScopeName Path
-----        --------- ----
-NETLOGON    *         C:\Windows\SYSVOL\sysvol\jaser.local\SCRIPTS
-SYSVOL      *         C:\Windows\SYSVOL\sysvol
-```
-
----
-
-## 📌 2.6 Key Takeaways & Sysadmin Insights
-- **Functional Levels**: Server 2019 runs on the Windows Server 2016 Forest/Domain Functional Level because Microsoft did not introduce breaking schema functional changes in 2019.
-- **Integrated DNS**: Promoting with `-InstallDns:$true` automatically provisions the Active Directory-Integrated DNS forward lookup zone, securing dynamic record registrations.
+| Item Verified | Expected Value | Observed in Screenshots | Status |
+| :--- | :--- | :--- | :--- |
+| **Server Role** | Active Directory Domain Services | Checked in Add Roles Wizard | ✅ Verified |
+| **Deployment Mode** | Add a new forest | Selected in Configuration Wizard | ✅ Verified |
+| **Root Domain Name** | `JASER.LOCAL` | Specified in Root Domain field | ✅ Verified |
+| **Target Server** | `Server2019` | Displayed on wizard title bar | ✅ Verified |
+| **DNS Server Role** | Integrated with AD DS | Auto-provisioned during promotion | ✅ Verified |

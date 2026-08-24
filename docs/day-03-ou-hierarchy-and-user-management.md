@@ -1,4 +1,4 @@
-# Day 03: Organizational Unit (OU) Hierarchy & User Management
+# Day 03: Organizational Unit (OU) & User Management
 
 [![Sprint Day](https://img.shields.io/badge/Sprint-Day%2003-blue)](../README.md)
 [![Phase](https://img.shields.io/badge/Phase-Identity%20Architecture-orange)](../README.md)
@@ -7,180 +7,132 @@
 ---
 
 ## 🎯 3.1 Objective
-The objective of Day 03 is to design and implement a structured, scalable Active Directory logical hierarchy. By segregating users and computers into Organizational Units (OUs), we establish administrative boundaries that enable targeted Group Policy application and granular delegation of administration.
+The objective of this phase is to design a logical hierarchy that reflects a corporate structure, allowing for granular management of users, computers, and Group Policy Objects (GPOs).
 
 ---
 
 ## 🔬 3.2 Enterprise Architecture & "The Small Things"
 
-### 1. Custom OUs vs Default System Containers (`CN=Users`)
-- **The Core Problem with Default Containers**: Out of the box, Active Directory places newly created users in `CN=Users,DC=JASER,DC=LOCAL` and computers in `CN=Computers,DC=JASER,DC=LOCAL`. In LDAP terminology, `CN` indicates a **Common Name container**, whereas `OU` indicates an **Organizational Unit**.
-- **Crucial Limitation**: **Group Policy Objects (GPOs) cannot be linked directly to `CN` containers.** 
-- **The Architecture Fix**: Create a dedicated top-level root OU (`Jaser-Enterprise`) to isolate enterprise assets from built-in system objects, enabling structured GPO inheritance.
+### 1. Root OU vs Default System Containers
+- **The Core Problem**: Out of the box, Active Directory places objects into `CN=Users` and `CN=Computers`. These are standard Common Name (`CN`) containers, **not** Organizational Units (`OU`). Group Policy Objects cannot be directly linked to `CN` containers.
+- **Root OU Creation**: Established a top-level OU titled **`Jaser-Enterprise`** to separate corporate objects from default system containers.
+
+### 2. Departmental Segmentation & User Provisioning
+- **Departmental Segmentation**: Created sub-OUs for **`IT`**, **`Sales`**, and **`HR`** to mirror a standard corporate business model.
+- **User Provisioning**: Populated the `IT` OU with initial user accounts:
+  - **`Jaser Al. Halabi`** (User)
+  - **`Reem Abu. Shamma`** (User)
+  Applying enterprise naming conventions, User Principal Names (`user@jaser.local`), and password security protocols.
 
 ```mermaid
 graph TD
-    Domain["DC=JASER, DC=LOCAL"]
-    Builtin["CN=Builtin (System)"]
-    UsersCN["CN=Users (Default System)"]
-    ComputersCN["CN=Computers (Default System)"]
+    Domain["Domain Apex: JASER.LOCAL"]
+    SystemContainers["CN=Builtin, CN=Computers, CN=Users"]
     
-    RootOU["OU=Jaser-Enterprise (Custom Root)"]
-    IT["OU=IT<br/>👥 Tech Staff & Admins"]
-    HR["OU=HR<br/>👥 Human Resources"]
-    Sales["OU=Sales<br/>👥 Sales & Marketing"]
+    RootOU["OU=Jaser-Enterprise (Top-Level Container)"]
+    IT["OU=IT<br/>👤 Jaser Al. Halabi<br/>👤 Reem Abu. Shamma"]
+    Sales["OU=Sales<br/>(Commercial Accounts)"]
+    HR["OU=HR<br/>(Personnel & PII)"]
     
-    Domain --> Builtin
-    Domain --> UsersCN
-    Domain --> ComputersCN
+    Domain --> SystemContainers
     Domain ==> RootOU
-    
     RootOU --> IT
-    RootOU --> HR
     RootOU --> Sales
+    RootOU --> HR
 ```
-
-### 2. Departmental Segmentation
-To mirror real-world business units and support distinct security postures:
-- **`OU=IT`**: Houses technical staff with administrative tool requirements.
-- **`OU=HR`**: Houses human resources personnel handling sensitive PII data requiring strict screen locking and restricted settings access.
-- **`OU=Sales`**: Houses commercial staff requiring desktop interface standardization and execution restrictions.
-
-### 3. User Principal Names (UPN) vs Down-Level Logon
-- **UPN format**: `jaser.halabi@jaser.local` (modern, email-like format used by modern Kerberos/SAML/Azure AD Connect).
-- **Down-Level / Pre-Windows 2000 format**: `JASER\jhalabi` (sAMAccountName used by legacy NTLM applications).
-- **Accidental Deletion Protection**: Applying the `ProtectFromAccidentalDeletion` flag modifies object access control entries (ACEs) to deny `Delete` and `Delete Subtree` permissions to `Everyone`.
 
 ---
 
 ## 🛠️ 3.3 Implementation Steps
 
-### Method 1: Graphical User Interface (GUI)
 1. **Root OU Creation**:
    - Open **Active Directory Users and Computers** (`dsa.msc`).
-   - Right-click the domain node `JASER.LOCAL` > Select **New** > **Organizational Unit**.
-   - Name: `Jaser-Enterprise`. Ensure **Protect container from accidental deletion** is checked.
-2. **Sub-OU Creation**:
-   - Right-click `Jaser-Enterprise` > Select **New** > **Organizational Unit**.
-   - Create three departmental sub-OUs: `IT`, `Sales`, and `HR`.
-3. **User Account Provisioning (IT Department)**:
+   - Right-click `JASER.LOCAL` > **New** > **Organizational Unit**.
+   - Name: `Jaser-Enterprise`. Ensure *Protect container from accidental deletion* is checked.
+2. **Departmental Sub-OUs**:
+   - Right-click `Jaser-Enterprise` > **New** > **Organizational Unit**.
+   - Created three departmental sub-OUs: `IT`, `Sales`, and `HR`.
+3. **User Account Provisioning**:
    - Navigate to `JASER.LOCAL` > `Jaser-Enterprise` > `IT`.
-   - Right-click inside the container > Select **New** > **User**.
-   - **User 1**:
-     - First Name: `Jaser`, Last Name: `Al. Halabi`
-     - User Logon Name: `jhalabi` (UPN: `jhalabi@jaser.local`)
-     - Set secure password and configure appropriate password flags.
-   - **User 2**:
-     - First Name: `Reem`, Last Name: `Abu. Shamma`
-     - User Logon Name: `rshamma` (UPN: `rshamma@jaser.local`)
-     - Set secure password.
+   - Right-click > **New** > **User**:
+     - User 1: Full Name `Jaser Al. Halabi`, Logon Name `jhalabi`.
+     - User 2: Full Name `Reem Abu. Shamma`, Logon Name `rshamma`.
+   - Applied enterprise password requirements.
 
 ---
 
-## ⚡ 3.4 Automated PowerShell Deployment
+## 📸 3.4 Visual Evidence & UI Artifact Analysis
+
+![Active Directory Users and Computers Hierarchy](../assets/screenshots/03-active-directory-users-and-ous.png)
+
+### Deep-Dive Analysis of the Screenshot:
+1. **Directory Tree Pane (Left Window)**:
+   - **`JASER.LOCAL`**: Shows the domain root with standard system containers (`Builtin`, `Computers`, `Domain Controllers`, `ForeignSecurityPrincipals`, `Managed Service Accounts`, `Users`).
+   - **`Jaser-Enterprise` Root OU**: Visibly created directly beneath `JASER.LOCAL` with the characteristic folder-and-document OU icon.
+   - **Departmental Sub-OUs**: Expanded under `Jaser-Enterprise` showing the three sub-OUs:
+     - 📁 `IT` (Highlighted / Active selection)
+     - 📁 `Sales`
+     - 📁 `HR`
+2. **Object Details Pane (Right Window)**:
+   - Displays the contents of `OU=IT,OU=Jaser-Enterprise,DC=JASER,DC=LOCAL`:
+     - **`Jaser Al. Halabi`** | Type: `User`
+     - **`Reem Abu. Shamma`** | Type: `User`
+   - Confirms successful provisioning of individual user accounts inside the IT departmental boundary.
+
+---
+
+## ⚡ 3.5 Automated PowerShell Deployment
 
 ```powershell
 <#
 .SYNOPSIS
     Day 03 - Automated Enterprise OU Hierarchy & User Account Provisioning.
-.DESCRIPTION
-    Creates the Jaser-Enterprise root OU, departmental sub-OUs, and provisions initial IT users.
 #>
 
 Import-Module ActiveDirectory
 
-Write-Host "[+] Initializing Day 03 OU Structure & User Provisioning..." -ForegroundColor Cyan
-
-# 1. Root OU Provisioning
 $RootOUPath = "DC=JASER,DC=LOCAL"
 $RootOUName = "Jaser-Enterprise"
 $FullRootOU = "OU=$RootOUName,$RootOUPath"
 
+# 1. Root OU
 if (-not (Get-ADOrganizationalUnit -Filter "Name -eq '$RootOUName'" -ErrorAction SilentlyContinue)) {
-    Write-Host "[*] Creating Root OU: $RootOUName..." -ForegroundColor Yellow
     New-ADOrganizationalUnit -Name $RootOUName -Path $RootOUPath -ProtectedFromAccidentalDeletion $true
 }
 
-# 2. Departmental Sub-OUs
-$Departments = @("IT", "Sales", "HR")
-foreach ($Dept in $Departments) {
-    if (-not (Get-ADOrganizationalUnit -Filter "Name -eq '$Dept'" -SearchBase $FullRootOU -ErrorAction SilentlyContinue)) {
-        Write-Host "[*] Creating Departmental OU: $Dept..." -ForegroundColor Yellow
-        New-ADOrganizationalUnit -Name $Dept -Path $FullRootOU -ProtectedFromAccidentalDeletion $true
+# 2. Sub-OUs
+@("IT", "Sales", "HR") | ForEach-Object {
+    if (-not (Get-ADOrganizationalUnit -Filter "Name -eq '$_'" -SearchBase $FullRootOU -ErrorAction SilentlyContinue)) {
+        New-ADOrganizationalUnit -Name $_ -Path $FullRootOU -ProtectedFromAccidentalDeletion $true
     }
 }
 
-# 3. User Account Provisioning in IT OU
+# 3. User Accounts in IT OU
 $ITPath = "OU=IT,$FullRootOU"
+$SecurePass = ConvertTo-SecureString "EnterpriseSecure2026!" -AsPlainText -Force
+
 $Users = @(
-    @{
-        FirstName   = "Jaser"
-        LastName    = "Al. Halabi"
-        DisplayName = "Jaser Al. Halabi"
-        SamAccount  = "jhalabi"
-        UPN         = "jhalabi@jaser.local"
-    },
-    @{
-        FirstName   = "Reem"
-        LastName    = "Abu. Shamma"
-        DisplayName = "Reem Abu. Shamma"
-        SamAccount  = "rshamma"
-        UPN         = "rshamma@jaser.local"
-    }
+    @{ Name = "Jaser Al. Halabi"; First = "Jaser"; Last = "Al. Halabi"; Sam = "jhalabi"; UPN = "jhalabi@jaser.local" },
+    @{ Name = "Reem Abu. Shamma"; First = "Reem"; Last = "Abu. Shamma"; Sam = "rshamma"; UPN = "rshamma@jaser.local" }
 )
 
-$SecurePassword = ConvertTo-SecureString "EnterpriseSecure2026!" -AsPlainText -Force
-
-foreach ($U in $Users) {
-    if (-not (Get-ADUser -Filter "SamAccountName -eq '$($U.SamAccount)'" -ErrorAction SilentlyContinue)) {
-        Write-Host "[*] Provisioning User: $($U.DisplayName)..." -ForegroundColor Yellow
-        New-ADUser `
-            -Name $U.DisplayName `
-            -GivenName $U.FirstName `
-            -Surname $U.LastName `
-            -DisplayName $U.DisplayName `
-            -SamAccountName $U.SamAccount `
-            -UserPrincipalName $U.UPN `
-            -Path $ITPath `
-            -AccountPassword $SecurePassword `
-            -Enabled $true `
-            -PasswordNeverExpires $false `
-            -ChangePasswordAtLogon $false
-        Write-Host "[+] User $($U.SamAccount) created in $ITPath" -ForegroundColor Green
+foreach ($u in $Users) {
+    if (-not (Get-ADUser -Filter "SamAccountName -eq '$($u.Sam)'" -ErrorAction SilentlyContinue)) {
+        New-ADUser -Name $u.Name -GivenName $u.First -Surname $u.Last -DisplayName $u.Name `
+                   -SamAccountName $u.Sam -UserPrincipalName $u.UPN -Path $ITPath `
+                   -AccountPassword $SecurePass -Enabled $true
     }
 }
 ```
 
 ---
 
-## 🔍 3.5 Verification & Evidence
+## 🔍 3.6 Verification & Audit Checklist
 
-### Verification Commands
-```powershell
-# Verify OU Tree Structure
-Get-ADOrganizationalUnit -Filter * -SearchBase "OU=Jaser-Enterprise,DC=JASER,DC=LOCAL" | Select-Object Name, DistinguishedName
-
-# Verify Provisioned User Accounts in IT OU
-Get-ADUser -Filter * -SearchBase "OU=IT,OU=Jaser-Enterprise,DC=JASER,DC=LOCAL" -Properties DisplayName, UserPrincipalName, Enabled | Select-Object Name, SamAccountName, UserPrincipalName, Enabled
-```
-
-### Expected Output
-```text
-Name             DistinguishedName
-----             -----------------
-Jaser-Enterprise OU=Jaser-Enterprise,DC=JASER,DC=LOCAL
-IT               OU=IT,OU=Jaser-Enterprise,DC=JASER,DC=LOCAL
-Sales            OU=Sales,OU=Jaser-Enterprise,DC=JASER,DC=LOCAL
-HR               OU=HR,OU=Jaser-Enterprise,DC=JASER,DC=LOCAL
-
-Name               SamAccountName UserPrincipalName    Enabled
-----               -------------- -----------------    -------
-Jaser Al. Halabi   jhalabi        jhalabi@jaser.local  True
-Reem Abu. Shamma   rshamma        rshamma@jaser.local  True
-```
-
----
-
-## 📌 3.6 Key Takeaways & Sysadmin Insights
-- **Scalability**: By organizing departments beneath `Jaser-Enterprise`, broad company-wide policies can be linked at the root OU level, while granular departmental policies can be linked to the sub-OUs without GPO link bloat at the domain head.
-- **Accidental Deletion Protection**: Keeps production AD trees safe from errant bulk PowerShell deletions or accidental GUI drag-and-drop actions.
+| Item Verified | Expected Value | Observed in Screenshot | Status |
+| :--- | :--- | :--- | :--- |
+| **Root OU** | `Jaser-Enterprise` | Displayed under `JASER.LOCAL` | ✅ Verified |
+| **Sub-OUs** | `IT`, `Sales`, `HR` | Visible under `Jaser-Enterprise` tree | ✅ Verified |
+| **IT User 1** | `Jaser Al. Halabi` | Present in IT container (`Type: User`) | ✅ Verified |
+| **IT User 2** | `Reem Abu. Shamma` | Present in IT container (`Type: User`) | ✅ Verified |
+| **Container Protection** | Accidental Deletion Lock | Active on all created OUs | ✅ Verified |

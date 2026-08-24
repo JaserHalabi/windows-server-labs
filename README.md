@@ -12,9 +12,7 @@
 
 This repository documents the end-to-end deployment, identity architecture, network automation, and security hardening of an enterprise environment built on **Windows Server 2019**. 
 
-Designed as a **9-Day Modular Implementation Sprint**, this project transitions from low-level host initialization and Active Directory forest architecture to departmental Group Policy enforcement, centralized user profile redirection, and kernel-level storage defense via File Server Resource Manager (FSRM).
-
-Each day breaks down not just **what** was configured, but **why** it was designed that way, explaining the underlying Windows Server internals, Kerberos authentication constraints, DNS/DHCP integration mechanics, NTFS vs SMB security models, and storage minifilter drivers.
+Extracted directly from the hands-on engineering lab report by **Jaser Halabi**, this project is organized as a **9-Day Modular Implementation Sprint**. Every single phase incorporates authentic screenshot evidence from the lab report alongside deep-dive technical explanations of the underlying Windows Server internals, Kerberos authentication constraints, DNS/DHCP integration mechanics, NTFS vs SMB security models, and storage minifilter drivers.
 
 ---
 
@@ -56,19 +54,19 @@ flowchart TB
 
 ---
 
-## 📅 9-Day Implementation Sprint Index
+## 📅 9-Day Implementation Sprint & Visual Evidence Index
 
-| Sprint Day | Module | Core Technologies | Primary Focus / System Internals |
+| Sprint Day | Module | Core System Concepts | Lab Screenshot Evidence |
 | :--- | :--- | :--- | :--- |
-| [**Day 01**](docs/day-01-server-preconfig-and-networking.md) | **Server Pre-Configuration & Static Networking** | TCP/IP, DNS Loopback, Kerberos | Hostname standardization (`Server2019`), static IPv4 allocation, DNS loopback dependency chains, and Kerberos 5-minute clock skew protection (`MaxClockSkew`). |
-| [**Day 02**](docs/day-02-adds-role-and-forest-promotion.md) | **AD DS Role Provisioning & Forest Promotion** | Active Directory, ESE, FSMO | Role installation via DISM, forest root promotion (`JASER.LOCAL`), `NTDS.dit` database creation, `SYSVOL` replication shares, and FSMO role seeding. |
-| [**Day 03**](docs/day-03-ou-hierarchy-and-user-management.md) | **Enterprise OU Hierarchy & Identity Management** | LDAP, OUs, Security Accounts | Custom `OU=Jaser-Enterprise` vs un-linkable `CN=Users` containers, departmental segmentation (IT, Sales, HR), UPN formatting, and accidental deletion locks. |
-| [**Day 04**](docs/day-04-dns-server-and-service-discovery.md) | **DNS Management & Active Directory Service Locator** | DNS, SRV, SOA, Dynamic Updates | AD-Integrated Forward Lookup Zones, Host (A) records, SOA serial validation, and `_msdcs` SRV record service discovery (`_ldap`, `_kerberos`). |
-| [**Day 05**](docs/day-05-dhcp-scope-and-enterprise-options.md) | **DHCP Automation & Enterprise Scope Architecture** | DHCP, DORA, Scope Options | Active Directory DHCP authorization (`Add-DhcpServerInDC`), Scope `192.168.1.0/24`, Default Gateway (003), DNS Server (006), and Domain Suffix (015). |
-| [**Day 06**](docs/day-06-departmental-group-policy-hardening.md) | **Departmental Group Policy (GPO) Hardening** | GPO, LSDOU, Admin Templates | Granular baseline enforcement per department: HR password screensavers & Control Panel lock, IT CLI access, Sales wallpaper lock & Run command removal. |
-| [**Day 07**](docs/day-07-centralized-folder-redirection.md) | **Centralized Data Redirection & Profile Isolation** | SMB 3.0, NTFS DACLs, Offline Files | Redirecting `%USERPROFILE%\Documents` to `\\SERVER2019\CentralStorage`, configuring explicit NTFS inheritance and `CREATOR OWNER` DACLs for total data isolation. |
-| [**Day 08**](docs/day-08-advanced-storage-fsrm-quotas.md) | **Advanced Storage Management (FSRM Quotas)** | FSRM, Storage Quotas, I/O Limits | Hard Quotas (100 MB Limit) on `C:\CentralStorage`, filesystem-level write rejection (`ERROR_DISK_FULL`), protecting server volumes from storage exhaustion. |
-| [**Day 09**](docs/day-09-active-file-screening-security.md) | **Proactive Security via Active File Screening** | FSRM Minifilter Driver (`srmfltr.sys`) | Kernel-level I/O write interception, blocking non-business media extensions (`.mp3`, `.mp4`, `.mov`, `.avi`), zero performance overhead file control. |
+| [**Day 01**](docs/day-01-server-preconfig-and-networking.md) | **Server Pre-Configuration & Static Networking** | Hostname standardization (`Server2019`), static IPv4 (`192.168.10.10/24`), DNS loopback (`127.0.0.1`), and Kerberos 5-minute clock skew protection (`MaxClockSkew`). | ![Server Preconfig](assets/screenshots/01-server-manager-preconfig.png) |
+| [**Day 02**](docs/day-02-adds-role-and-forest-promotion.md) | **AD DS Role Provisioning & Forest Promotion** | Active Directory binary installation, forest root promotion (`JASER.LOCAL`), `NTDS.dit` ESE database, `SYSVOL` replication shares, and FSMO role seeding. | ![AD DS Promotion](assets/screenshots/02-adds-forest-promotion.png) |
+| [**Day 03**](docs/day-03-ou-hierarchy-and-user-management.md) | **Enterprise OU Hierarchy & Identity Management** | Custom `OU=Jaser-Enterprise` vs un-linkable `CN=Users` containers, departmental sub-OUs (IT, Sales, HR), and user accounts (`Jaser Al. Halabi`, `Reem Abu. Shamma`). | ![ADUC Hierarchy](assets/screenshots/03-active-directory-users-and-ous.png) |
+| [**Day 04**](docs/day-04-dns-server-and-service-discovery.md) | **DNS Management & AD Service Locator** | AD-Integrated Forward Lookup Zones, Host (A) records, SOA serial validation, and `_msdcs` SRV record service discovery (`_ldap`, `_kerberos`). | ![DNS Records](assets/screenshots/04-dns-manager-records.png) |
+| [**Day 05**](docs/day-05-dhcp-scope-and-enterprise-options.md) | **DHCP Automation & Enterprise Scope Options** | Active Directory DHCP authorization (`Add-DhcpServerInDC`), Scope `192.168.1.0/24`, Option 003 (Gateway `192.168.1.1`), Option 006 (DNS `192.168.10.10`), Option 015 (`JASER.LOCAL`). | ![DHCP Options](assets/screenshots/05-dhcp-scope-options.png) |
+| [**Day 06**](docs/day-06-departmental-group-policy-hardening.md) | **Departmental Group Policy (GPO) Hardening** | Granular baseline enforcement per department: HR password screensavers & Control Panel lock, IT CLI access, Sales wallpaper lock & Run command removal. | ![GPMC Console](assets/screenshots/06-group-policy-management.png) |
+| [**Day 07**](docs/day-07-centralized-folder-redirection.md) | **Centralized Data Redirection & Profile Isolation** | Redirecting `%USERPROFILE%\Documents` to `\\SERVER2019\CentralStorage`, configuring explicit NTFS inheritance and `CREATOR OWNER` DACLs for total data isolation. | ![User Folder Redirection](assets/screenshots/07-user-folder-verification.png) |
+| [**Day 08**](docs/day-08-advanced-storage-fsrm-quotas.md) | **Advanced Storage Management (FSRM Quotas)** | Hard Quotas (100 MB Limit) on `C:\CentralStorage`, filesystem-level write rejection (`ERROR_DISK_FULL`), protecting server volumes from storage exhaustion. | ![FSRM Quotas](assets/screenshots/08-fsrm-quota-configuration.png) |
+| [**Day 09**](docs/day-09-active-file-screening-security.md) | **Proactive Security via Active File Screening** | Kernel-level I/O write interception via FSRM Minifilter Driver (`srmfltr.sys`), blocking non-business media extensions (`.mp3`, `.mp4`, `.mov`, `.avi`). | ![FSRM File Screening](assets/screenshots/09-fsrm-active-file-screening.png) |
 
 ---
 
@@ -109,45 +107,22 @@ powershell/
 
 ---
 
-## 🚀 How to Replicate This Environment
+## 🚀 How to Push to Your GitHub Account
 
-### Prerequisites
-- **Hypervisor**: VMware ESXi, Hyper-V, or VirtualBox
-- **Virtual Machine Specifications**:
-  - OS: Windows Server 2019 Datacenter / Standard (Core or Desktop Experience)
-  - vCPU: 2+ Cores
-  - RAM: 4 GB+
-  - Storage: 60 GB+ VHDX (NTFS Formatted)
-  - Network Adapter: Internal Host-Only / Private VSwitch
+```bash
+cd /home/jaser/.gemini/antigravity/scratch/windows-server-2019-enterprise-lab
 
-### Deployment Execution
-Run the automated PowerShell scripts sequentially from an elevated Administrative PowerShell session:
+# Link to your remote GitHub repository
+git remote add origin https://github.com/<YOUR_GITHUB_USERNAME>/windows-server-2019-enterprise-lab.git
 
-```powershell
-# 1. Base Configuration & Static IP
-.\powershell\01-Server-PreConfig.ps1
-
-# 2. AD DS Forest Promotion (Triggers automated restart)
-.\powershell\02-ADDS-Deployment.ps1
-
-# 3. Enterprise Structure & Identity
-.\powershell\03-OU-and-User-Provisioning.ps1
-
-# 4. Core Network Services
-.\powershell\04-DNS-Configuration.ps1
-.\powershell\05-DHCP-Configuration.ps1
-
-# 5. Policy Hardening & Storage Security
-.\powershell\06-Group-Policy-Management.ps1
-.\powershell\07-Folder-Redirection-Storage.ps1
-.\powershell\08-FSRM-Quota-Management.ps1
-.\powershell\09-FSRM-Active-File-Screening.ps1
+# Push to main
+git push -u origin main
 ```
 
 ---
 
 ## 👤 Author & Lab Metadata
 - **Engineer**: Jaser Halabi
-- **Specialization**: Cybersecurity & Network Engineering
-- **Project Completion**: April 9, 2026
+- **Course**: Cybersecurity & Network Engineering
+- **Project Completion Date**: April 9, 2026
 - **Target OS**: Windows Server 2019 Datacenter (Build 17763)

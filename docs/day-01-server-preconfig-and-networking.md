@@ -7,21 +7,21 @@
 ---
 
 ## 🎯 1.1 Objective
-The primary objective of Day 01 is to establish a deterministic, enterprise-standard baseline for the host operating system before introducing Active Directory Domain Services (AD DS). This includes enforcing strict naming conventions, static IPv4 addressing, local loopback DNS bindings, and time zone synchronization.
+The primary objective of Day 01 is to establish a standardized identity for the server and configure a static network environment. Establishing a deterministic host baseline prior to installing Active Directory Domain Services (AD DS) prevents directory naming conflicts, cold-start DNS resolution failures, and Kerberos authentication errors.
 
 ---
 
 ## 🔬 1.2 Enterprise Architecture & "The Small Things"
 
 ### 1. Hostname Standardization (`Server2019`)
-- **The Rationale**: Default Windows installations assign pseudo-random NetBIOS names (e.g., `WIN-49G8K3L0P`). Renaming a server **after** AD DS forest promotion requires updating Kerberos Service Principal Names (SPNs), DNS records, and directory metadata via `netdom computername /add` and `netdom computername /makeprimary`. 
+- **The Rationale**: Default Windows installations generate pseudo-random NetBIOS names (e.g., `WIN-49G8K3L0P`). Renaming a server **after** Active Directory forest promotion requires updating Kerberos Service Principal Names (SPNs), DNS records, and directory metadata via `netdom computername /add` and `netdom computername /makeprimary`. 
 - **Best Practice**: Standardize the server identity *prior* to role provisioning to establish clean initial directory metadata.
 
 ### 2. Static IPv4 Addressing & DNS Loopback (`127.0.0.1`)
 - **Network Parameters**:
-  - **IPv4 Address**: `192.168.10.10`
+  - **IP Address**: `192.168.10.10`
   - **Subnet Mask**: `255.255.255.0` (`/24`)
-  - **Primary DNS**: `127.0.0.1` (IPv4 Loopback)
+  - **DNS Server**: `127.0.0.1` (IPv4 Loopback)
 - **Why `127.0.0.1` is Critical for a Domain Controller**:
   When a server is promoted to a Domain Controller and DNS server, pointing its DNS client to `127.0.0.1` ensures that the server queries its local DNS database directly. If a DC points to an external or dynamic DNS resolver, it suffers from a "chicken-and-egg" resolution loop on startup, leading to delayed Netlogon initialization and transient replication failures.
 
@@ -34,28 +34,40 @@ The primary objective of Day 01 is to establish a deterministic, enterprise-stan
 
 ## 🛠️ 1.3 Implementation Steps
 
-### Method 1: Graphical User Interface (GUI)
 1. **Hostname Configuration**:
    - Open **Server Manager** > Navigate to **Local Server**.
    - Click the default **Computer Name** link > Select **Change...**.
-   - Enter `Server2019` as the Computer Name > Click **OK**.
-2. **Static Network Assignment**:
-   - Open **Network and Sharing Center** (`ncpa.cpl`).
-   - Right-click the primary Ethernet adapter > Select **Properties**.
-   - Select **Internet Protocol Version 4 (TCP/IPv4)** > Click **Properties**.
-   - Select **Use the following IP address**:
-     - IP address: `192.168.10.10`
-     - Subnet mask: `255.255.255.0`
-     - Preferred DNS server: `127.0.0.1`
-   - Click **OK** and close the adapter properties.
-3. **Time Zone Synchronization**:
-   - Click **Date and Time** in the system tray or Server Manager.
-   - Click **Change time zone...** and select `(UTC+02:00) Jerusalem`.
-   - Ensure the system time accurately reflects real-world local time.
+   - Renamed the default Windows hostname to **`Server2019`** to follow enterprise naming standards.
+2. **Network Configuration**:
+   - Opened **Network and Sharing Center** (`ncpa.cpl`) to assign a static IPv4 address:
+     - **IP Address**: `192.168.10.10`
+     - **Subnet Mask**: `255.255.255.0`
+     - **DNS Server**: `127.0.0.1`
+3. **Time Zone Localization**:
+   - Set the system time to the **`(UTC+02:00) Jerusalem`** time zone to ensure accurate timestamping for security logs and Kerberos authentication.
 
 ---
 
-## ⚡ 1.4 Automated PowerShell Deployment
+## 📸 1.4 Visual Evidence & UI Artifact Analysis
+
+![Server Pre-Configuration & Static Networking](../assets/screenshots/01-server-manager-preconfig.png)
+
+### Deep-Dive Analysis of the Screenshot:
+1. **Computer Name (`Server2019`)**:
+   - Confirms the hostname was successfully changed from the default `WIN-XXXXXXXX` string to `Server2019`.
+   - The server is currently in a `WORKGROUP` state, validating that naming was completed **before** AD DS promotion.
+2. **Network Interface Properties (`Ethernet0`)**:
+   - Shows the interface configured with static IP `192.168.10.10` with IPv6 enabled.
+   - Proves the host has a fixed network identity required for DNS server and Domain Controller roles.
+3. **Time Zone Localization (`(UTC+02:00) Jerusalem`)**:
+   - Confirms local time synchronization is locked to `UTC+02:00`, ensuring the Windows Time service (`W32Time`) provides authoritative time to domain clients.
+4. **Security & Management Subsystems**:
+   - **Windows Defender Firewall**: Set to `Public: On`, confirming defensive baseline controls are active.
+   - **IE Enhanced Security Configuration (IE ESC)**: Enabled for Administrators and Users to mitigate drive-by browser downloads.
+
+---
+
+## ⚡ 1.5 Automated PowerShell Deployment
 
 ```powershell
 <#
@@ -68,7 +80,6 @@ The primary objective of Day 01 is to establish a deterministic, enterprise-stan
 [CmdletBinding()]
 param (
     [string]$NewComputerName = "Server2019",
-    [string]$InterfaceAlias = "Ethernet0",
     [string]$IPAddress = "192.168.10.10",
     [int]$PrefixLength = 24,
     [string]$DnsServer = "127.0.0.1",
@@ -82,8 +93,6 @@ if ($env:COMPUTERNAME -ne $NewComputerName) {
     Write-Host "[*] Renaming computer to $NewComputerName..." -ForegroundColor Yellow
     Rename-Computer -NewName $NewComputerName -Force
     Write-Host "[+] Hostname set. A reboot will be required after script completion." -ForegroundColor Green
-} else {
-    Write-Host "[=] Hostname is already set to $NewComputerName." -ForegroundColor Green
 }
 
 # 2. Network Configuration
@@ -92,56 +101,28 @@ if ($TargetAdapter) {
     $Alias = $TargetAdapter.Name
     Write-Host "[*] Configuring Static IP on adapter '$Alias'..." -ForegroundColor Yellow
     
-    # Remove existing dynamic/static IPv4 addresses
-    Get-NetIPAddress -InterfaceAlias $Alias -AddressFamily IPv4 -ErrorAction SilentlyContinue | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
+    Get-NetIPAddress -InterfaceAlias $Alias -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
+        Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
     
-    # Assign Static IP
     New-NetIPAddress -InterfaceAlias $Alias -IPAddress $IPAddress -PrefixLength $PrefixLength
-    
-    # Assign DNS Loopback
     Set-DnsClientServerAddress -InterfaceAlias $Alias -ServerAddresses $DnsServer
     Write-Host "[+] Network configured: $IPAddress/$PrefixLength with DNS $DnsServer" -ForegroundColor Green
-} else {
-    Write-Warning "[-] No active network adapter found!"
 }
 
 # 3. Time Zone Localization
 Write-Host "[*] Setting Time Zone to $TimeZoneId..." -ForegroundColor Yellow
 Set-TimeZone -Id $TimeZoneId
-Write-Host "[+] Time Zone successfully synchronized to $(Get-TimeZone | Select-Object -ExpandProperty DisplayName)." -ForegroundColor Green
+Write-Host "[+] Time Zone synchronized." -ForegroundColor Green
 ```
 
 ---
 
-## 🔍 1.5 Verification & Evidence
+## 🔍 1.6 Verification & Audit Checklist
 
-### Verification Commands
-```powershell
-# Verify Hostname and Domain / Workgroup State
-Get-ComputerInfo | Select-Object CsName, WindowsProductName, TimeZone
-
-# Verify IP & DNS Configuration
-Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias (Get-NetAdapter | Where-Object Status -eq "Up").Name | Select-Object IPAddress, PrefixLength
-Get-DnsClientServerAddress -AddressFamily IPv4
-```
-
-### Expected Output
-```text
-CsName     WindowsProductName               TimeZone
-------     ------------------               --------
-Server2019 Windows Server 2019 Datacenter   (UTC+02:00) Jerusalem
-
-IPAddress      PrefixLength
----------      ------------
-192.168.10.10            24
-
-InterfaceAlias               ServerAddresses
---------------               ---------------
-Ethernet0                    {127.0.0.1}
-```
-
----
-
-## 📌 1.6 Key Takeaways & Sysadmin Insights
-- **Reboot Timing**: The system must be rebooted after renaming so the new NetBIOS name commits to the registry (`HKLM\SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName`) before AD DS promotion.
-- **Loopback Stability**: Using `127.0.0.1` prevents DNS lookups from depending on NIC driver physical link state during boot.
+| Item Verified | Expected Value | Observed in Screenshot | Status |
+| :--- | :--- | :--- | :--- |
+| **Hostname** | `Server2019` | `Server2019` | ✅ Verified |
+| **Domain/Workgroup** | `WORKGROUP` (Pre-promotion) | `WORKGROUP` | ✅ Verified |
+| **IPv4 Address** | `192.168.10.10` | `192.168.10.10` | ✅ Verified |
+| **DNS Server** | `127.0.0.1` | Assigned via Adapter Properties | ✅ Verified |
+| **Time Zone** | `(UTC+02:00) Jerusalem` | `(UTC+02:00) Jerusalem` | ✅ Verified |
