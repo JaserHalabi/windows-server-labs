@@ -17,8 +17,7 @@ To implement **Folder Redirection** using Group Policy. This process ensures tha
   - `Administrator`: Read/Write
   - `Administrators`: Owner
   - `Everyone`: Read/Write
-- **Step 2: Policy Configuration**: A GPO was configured to redirect the Documents library to the server using the path:
-  $$\text{\texttt{\textbackslash\textbackslash SERVER2019\textbackslash CentralStorage}}$$
+- **Step 2: Policy Configuration**: 
   - **Setting**: `Basic - Redirect everyone's folder to the same location`
   - **Target Folder Location**: `Create a folder for each user under the root path`
   - **Root Path**: `\\SERVER2019\CentralStorage`
