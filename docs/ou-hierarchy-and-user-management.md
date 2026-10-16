@@ -1,6 +1,4 @@
-# Day 03: Organizational Unit (OU) & User Management
-
-[![Day 03](https://img.shields.io/badge/Day-03-blue)](../README.md)
+# Organizational Unit (OU) & User Management
 [![Phase](https://img.shields.io/badge/Phase-OU%20%26%20User%20Management-orange)](../README.md)
 [![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 

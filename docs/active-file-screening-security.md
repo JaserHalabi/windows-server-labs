@@ -1,6 +1,4 @@
-# Day 09: Proactive Security via File Screening
-
-[![Day 09](https://img.shields.io/badge/Day-09-blue)](../README.md)
+# Active File Screening & Storage Security
 [![Phase](https://img.shields.io/badge/Phase-Proactive%20Security-orange)](../README.md)
 [![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 

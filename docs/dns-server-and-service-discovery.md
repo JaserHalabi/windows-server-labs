@@ -1,6 +1,4 @@
-# Day 04: DNS Management
-
-[![Day 04](https://img.shields.io/badge/Day-04-blue)](../README.md)
+# DNS Management & Service Discovery
 [![Phase](https://img.shields.io/badge/Phase-DNS%20Management-orange)](../README.md)
 [![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 

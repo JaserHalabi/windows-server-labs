@@ -1,6 +1,4 @@
-# Day 02: Active Directory Domain Services (AD DS) Deployment
-
-[![Day 02](https://img.shields.io/badge/Day-02-blue)](../README.md)
+# Active Directory Domain Services (AD DS) Deployment
 [![Phase](https://img.shields.io/badge/Phase-AD%20DS%20Deployment-orange)](../README.md)
 [![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 

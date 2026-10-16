@@ -1,6 +1,4 @@
-# Day 06: Group Policy Implementation
-
-[![Day 06](https://img.shields.io/badge/Day-06-blue)](../README.md)
+# Departmental Group Policy Hardening
 [![Phase](https://img.shields.io/badge/Phase-Group%20Policy-orange)](../README.md)
 [![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 

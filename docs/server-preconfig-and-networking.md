@@ -1,6 +1,4 @@
-# Day 01: Server Pre-Configuration & Static Networking
-
-[![Day 01](https://img.shields.io/badge/Day-01-blue)](../README.md)
+# Server Pre-Configuration & Static Networking
 [![Phase](https://img.shields.io/badge/Phase-Server%20Pre--Configuration-orange)](../README.md)
 [![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 

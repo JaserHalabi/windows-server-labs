@@ -1,6 +1,4 @@
-# Day 07: Centralized Data Redirection (GPO)
-
-[![Day 07](https://img.shields.io/badge/Day-07-blue)](../README.md)
+# Centralized Folder Redirection (GPO)
 [![Phase](https://img.shields.io/badge/Phase-Data%20Redirection-orange)](../README.md)
 [![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 

@@ -1,6 +1,4 @@
-# Day 08: Advanced Storage (FSRM)
-
-[![Day 08](https://img.shields.io/badge/Day-08-blue)](../README.md)
+# Advanced Storage & FSRM Quotas
 [![Phase](https://img.shields.io/badge/Phase-Advanced%20Storage-orange)](../README.md)
 [![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 

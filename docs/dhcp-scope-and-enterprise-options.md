@@ -1,6 +1,4 @@
-# Day 05: DHCP Server Configuration
-
-[![Day 05](https://img.shields.io/badge/Day-05-blue)](../README.md)
+# DHCP Server Configuration & Enterprise Options
 [![Phase](https://img.shields.io/badge/Phase-DHCP%20Configuration-orange)](../README.md)
 [![Status](https://img.shields.io/badge/Status-Completed%20%26%20Verified-brightgreen)](../README.md)
 
